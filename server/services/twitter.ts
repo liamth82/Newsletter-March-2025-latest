@@ -1,10 +1,14 @@
 import { TwitterApi } from 'twitter-api-v2';
 
+console.log('Initializing Twitter client with credentials:', {
+  appKey: process.env.TWITTER_API_KEY ? 'present' : 'missing',
+  appSecret: process.env.TWITTER_API_SECRET ? 'present' : 'missing',
+});
+
+// Initialize the client with application-only auth
 const client = new TwitterApi({
   appKey: process.env.TWITTER_API_KEY!,
   appSecret: process.env.TWITTER_API_SECRET!,
-  accessToken: process.env.TWITTER_ACCESS_TOKEN!,
-  accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET!,
 });
 
 export async function searchTweets(keywords: string[]) {
@@ -16,17 +20,21 @@ export async function searchTweets(keywords: string[]) {
       return [];
     }
 
+    // Get bearer token for app-only auth
+    const appClient = await client.appLogin();
+    console.log('Successfully authenticated with Twitter');
+
     const tweets = await Promise.all(
       keywords.map(async (keyword) => {
         console.log(`Fetching tweets for keyword: ${keyword}`);
         try {
-          const result = await client.v2.search({
-            query: keyword,
+          const result = await appClient.v2.search(keyword, {
             max_results: 10,
-            "tweet.fields": ["created_at", "public_metrics", "author_id"],
+            expansions: ['author_id'],
+            'tweet.fields': ['created_at', 'public_metrics'],
           });
-          console.log(`Found ${result.data.data?.length || 0} tweets for ${keyword}`);
-          return result.data.data || [];
+          console.log(`Found ${result.data.length || 0} tweets for ${keyword}`);
+          return result.data || [];
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];

@@ -80,12 +80,21 @@ export default function Preview() {
 
   // Process tweet content for display
   const processedContent = template.content?.replace(
-    "{{tweets}}",
+    /{{tweets}}/g,
     newsletter.tweetContent?.length
       ? newsletter.tweetContent
-          .map((tweet: any) => `<div class="tweet">${tweet.text}</div>`)
+          .map((tweet: any) => 
+            `<div class="tweet">
+              <p>${tweet.text}</p>
+              <div class="text-sm text-muted-foreground mt-2">
+                ${new Date(tweet.created_at).toLocaleString()}
+              </div>
+            </div>`
+          )
           .join("")
-      : "<p>No tweets added yet.</p>"
+      : `<div class="p-4 border rounded bg-muted">
+          <p class="text-muted-foreground">No tweets found. Try updating your keywords or fetch tweets again.</p>
+         </div>`
   ) || "No content available";
 
   return (
