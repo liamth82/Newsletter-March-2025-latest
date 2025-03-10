@@ -18,6 +18,9 @@ import {
 } from "recharts";
 import { Loader2 } from "lucide-react";
 import { Newsletter, AnalyticsAggregate } from "@shared/schema";
+import { AnalyticsFilters, type AnalyticsFilters as FilterType } from "@/components/analytics-filters";
+import { useState } from "react";
+import { isWithinInterval, parseISO } from "date-fns";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--muted))"];
 
@@ -34,7 +37,23 @@ interface ChartData {
   clicks: number;
 }
 
+interface TimeSeriesData {
+  date: string;
+  views: number;
+  engagement: number;
+}
+
 export default function Analytics() {
+  const [filters, setFilters] = useState<FilterType>({
+    dateRange: {
+      from: undefined,
+      to: undefined,
+    },
+    category: "all",
+    minViews: 0,
+    minClicks: 0,
+  });
+
   const { data: newsletters, isLoading: loadingNewsletters } = useQuery<Newsletter[]>({
     queryKey: ["/api/newsletters"],
   });
@@ -58,11 +77,60 @@ export default function Analytics() {
     );
   }
 
-  const chartData: ChartData[] = analytics?.map((item) => ({
+  const filteredAnalytics = analytics?.filter((item) => {
+    const newsletter = newsletters?.find((n) => n.id === item.newsletterId);
+    if (!newsletter) return false;
+
+    // Apply date range filter
+    if (filters.dateRange.from && filters.dateRange.to) {
+      const itemDate = parseISO(item.lastUpdated.toString());
+      if (!isWithinInterval(itemDate, {
+        start: filters.dateRange.from,
+        end: filters.dateRange.to,
+      })) {
+        return false;
+      }
+    }
+
+    // Apply category filter
+    if (filters.category !== "all" && newsletter.templateId) {
+      // You would need to fetch template category here or store it in newsletter
+      // For now, we'll skip category filtering
+    }
+
+    // Apply metrics filters
+    const views = item.totalViews ?? 0;
+    const clicks = item.totalClicks ?? 0;
+    return views >= filters.minViews && clicks >= filters.minClicks;
+  });
+
+  const chartData: ChartData[] = filteredAnalytics?.map((item) => ({
     name: `Newsletter #${item.newsletterId}`,
     views: item.totalViews ?? 0,
     clicks: item.totalClicks ?? 0,
   })) || [];
+
+  // Generate time series data
+  const timeSeriesData: TimeSeriesData[] = filteredAnalytics?.reduce((acc: TimeSeriesData[], item) => {
+    const date = new Date(item.lastUpdated).toLocaleDateString();
+    const existingEntry = acc.find((entry) => entry.date === date);
+
+    if (existingEntry) {
+      existingEntry.views += item.totalViews ?? 0;
+      existingEntry.engagement = Math.round(
+        ((item.totalClicks ?? 0) / (item.totalViews ?? 1)) * 100
+      );
+    } else {
+      acc.push({
+        date,
+        views: item.totalViews ?? 0,
+        engagement: Math.round(
+          ((item.totalClicks ?? 0) / (item.totalViews ?? 1)) * 100
+        ),
+      });
+    }
+    return acc;
+  }, []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) || [];
 
   const deliveryData = newsletters?.reduce((acc: any[], newsletter) => {
     const status = newsletter.deliveryStatus || 'pending';
@@ -81,7 +149,9 @@ export default function Analytics() {
       <main className="flex-1 p-8">
         <h1 className="text-3xl font-bold mb-8">Analytics Dashboard</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <AnalyticsFilters onFiltersChange={setFilters} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 my-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -127,6 +197,7 @@ export default function Analytics() {
         <Tabs defaultValue="performance" className="space-y-4">
           <TabsList>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="trends">Trends</TabsTrigger>
             <TabsTrigger value="delivery">Delivery Status</TabsTrigger>
           </TabsList>
 
@@ -146,6 +217,41 @@ export default function Analytics() {
                       <Bar dataKey="views" fill="hsl(var(--primary))" name="Views" />
                       <Bar dataKey="clicks" fill="hsl(var(--muted))" name="Clicks" />
                     </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="trends" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Trends</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={timeSeriesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <Tooltip />
+                      <Line
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="views"
+                        stroke="hsl(var(--primary))"
+                        name="Views"
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="engagement"
+                        stroke="hsl(var(--muted))"
+                        name="Engagement %"
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
