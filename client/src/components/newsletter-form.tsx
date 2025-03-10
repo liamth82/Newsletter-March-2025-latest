@@ -10,10 +10,12 @@ import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { Template } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  
+  const { toast } = useToast();
+
   const { data: templates } = useQuery<Template[]>({
     queryKey: ["/api/templates"],
   });
@@ -23,18 +25,39 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
     defaultValues: {
       templateId: undefined,
       keywords: [],
-      scheduleTime: undefined,
+      scheduleTime: null,
+      status: 'draft',
+      sentAt: null,
+      totalRecipients: null,
+      deliveryStatus: null,
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('Submitting newsletter data:', data);
       const res = await apiRequest("POST", "/api/newsletters", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to create newsletter');
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
+      toast({
+        title: "Success",
+        description: "Newsletter created successfully",
+      });
       onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      console.error('Newsletter creation error:', error);
     },
   });
 
