@@ -28,7 +28,7 @@ export default function Templates() {
                 Create Template
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[800px]">
               <TemplateEditor onSuccess={() => setIsCreateOpen(false)} />
             </DialogContent>
           </Dialog>
@@ -56,9 +56,7 @@ export default function Templates() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => {
-                      setIsCreateOpen(true);
-                    }}
+                    onClick={() => setIsCreateOpen(true)}
                   >
                     Edit Template
                   </Button>

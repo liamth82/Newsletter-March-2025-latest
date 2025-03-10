@@ -17,77 +17,13 @@ import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const SAMPLE_DATA = {
   newsletter_title: "Weekly Tech Roundup",
-  tweets: `
-    <div class="tweet">
-      <p>Sample Tweet #1: Exciting developments in AI!</p>
-    </div>
-    <div class="tweet">
-      <p>Sample Tweet #2: New features launched!</p>
-    </div>
-  `,
+  tweets: `<div class="tweet">Sample Tweet #1</div><div class="tweet">Sample Tweet #2</div>`,
 };
 
 const VARIABLE_BUTTONS = [
   { label: "Newsletter Title", variable: "{{newsletter_title}}" },
   { label: "Tweets Content", variable: "{{tweets}}" },
 ];
-
-const DEFAULT_TEMPLATE = `
-<div class="newsletter">
-  <div class="header">
-    <h1>{{newsletter_title}}</h1>
-  </div>
-
-  <div class="content">
-    <div class="intro">
-      <p>Welcome to this week's newsletter!</p>
-    </div>
-
-    <div class="tweets-section">
-      {{tweets}}
-    </div>
-  </div>
-
-  <div class="footer">
-    <p>Thanks for reading!</p>
-  </div>
-</div>
-
-<style>
-.newsletter {
-  font-family: Arial, sans-serif;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.content {
-  line-height: 1.6;
-}
-
-.tweets-section {
-  margin: 20px 0;
-}
-
-.tweet {
-  border: 1px solid #e1e1e1;
-  border-radius: 8px;
-  padding: 15px;
-  margin: 10px 0;
-  background: #f8f8f8;
-}
-
-.footer {
-  margin-top: 30px;
-  text-align: center;
-  color: #666;
-}
-</style>`;
 
 export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   const [previewHtml, setPreviewHtml] = useState<string>("");
@@ -98,7 +34,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     resolver: zodResolver(insertTemplateSchema),
     defaultValues: {
       name: "",
-      content: DEFAULT_TEMPLATE,
+      content: "",
     },
   });
 
@@ -139,35 +75,35 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     setPreviewHtml(DOMPurify.sanitize(previewContent));
   };
 
-  const handleEditorInit = (evt: any, editor: any) => {
+  const handleEditorInit = () => {
     setIsEditorReady(true);
   };
 
   const insertVariable = (variable: string) => {
-    const editor = (window as any).tinymce?.activeEditor;
-    if (editor) {
-      editor.insertContent(variable);
-      handleEditorChange(editor.getContent());
-    } else {
+    if (!isEditorReady) {
       toast({
         title: "Error",
         description: "Editor not ready. Please try again.",
         variant: "destructive",
       });
+      return;
+    }
+
+    const editor = (window as any).tinymce?.activeEditor;
+    if (editor) {
+      editor.insertContent(variable);
+      handleEditorChange(editor.getContent());
     }
   };
 
   return (
-    <>
+    <div className="space-y-6">
       <DialogHeader>
-        <DialogTitle>Edit Newsletter Template</DialogTitle>
+        <DialogTitle>Create Newsletter Template</DialogTitle>
       </DialogHeader>
 
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}
-          className="space-y-6"
-        >
+        <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
           <FormField
             control={form.control}
             name="name"
@@ -175,7 +111,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
               <FormItem>
                 <FormLabel>Template Name</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="Enter template name" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -199,7 +135,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
             </div>
 
             <Tabs defaultValue="edit">
-              <TabsList>
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="edit">Edit</TabsTrigger>
                 <TabsTrigger value="preview">Preview</TabsTrigger>
               </TabsList>
@@ -210,41 +146,42 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                   name="content"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="relative">
-                        {!isEditorReady && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-md z-10">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                          </div>
-                        )}
-                        <FormControl>
-                          <div className="relative min-h-[500px] border rounded-md">
-                            <Editor
-                              apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
-                              init={{
-                                height: 500,
-                                menubar: false,
-                                plugins: [
-                                  'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
-                                  'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                                  'insertdatetime', 'table', 'code', 'help', 'wordcount'
-                                ],
-                                toolbar: 'undo redo | formatselect | ' +
-                                  'bold italic forecolor | alignleft aligncenter ' +
-                                  'alignright alignjustify | bullist numlist | ' +
-                                  'removeformat code | help',
-                                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                                branding: false,
-                                promotion: false,
-                                statusbar: false,
-                                resize: false,
-                              }}
-                              value={field.value}
-                              onEditorChange={handleEditorChange}
-                              onInit={handleEditorInit}
-                            />
-                          </div>
-                        </FormControl>
-                      </div>
+                      <FormControl>
+                        <div className="relative min-h-[400px] border rounded-md">
+                          {!isEditorReady && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-50">
+                              <Loader2 className="h-8 w-8 animate-spin" />
+                            </div>
+                          )}
+                          <Editor
+                            apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
+                            onInit={(_, editor) => {
+                              handleEditorInit();
+                              editor.setContent(`
+                                <h1>{{newsletter_title}}</h1>
+                                <div class="content">
+                                  <p>Welcome to our newsletter!</p>
+                                  {{tweets}}
+                                </div>
+                              `);
+                            }}
+                            init={{
+                              height: 400,
+                              menubar: false,
+                              plugins: [
+                                'link', 'lists', 'code'
+                              ],
+                              toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | code',
+                              content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                              branding: false,
+                              resize: false,
+                              statusbar: false,
+                            }}
+                            value={field.value}
+                            onEditorChange={handleEditorChange}
+                          />
+                        </div>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -254,7 +191,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
               <TabsContent value="preview">
                 <Card className="p-6">
                   <div 
-                    className="preview-content"
+                    className="preview-content prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: previewHtml }}
                   />
                 </Card>
@@ -263,13 +200,13 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={createMutation.isPending || !isEditorReady}>
+            <Button type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Template
             </Button>
           </div>
         </form>
       </Form>
-    </>
+    </div>
   );
 }
