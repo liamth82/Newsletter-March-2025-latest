@@ -13,7 +13,12 @@ export const templates = pgTable("templates", {
   userId: integer("user_id").notNull(),
   name: text("name").notNull(),
   content: text("content").notNull(),
+  category: text("category").default('general'),
+  styles: json("styles").default({}),
+  sections: json("sections").array().default([]),
+  variables: json("variables").array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const newsletters = pgTable("newsletters", {
@@ -35,6 +40,10 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const insertTemplateSchema = createInsertSchema(templates).pick({
   name: true,
   content: true,
+  category: true,
+  styles: true,
+  sections: true,
+  variables: true,
 });
 
 export const insertNewsletterSchema = createInsertSchema(newsletters).pick({

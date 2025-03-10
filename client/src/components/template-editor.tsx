@@ -14,6 +14,13 @@ import DOMPurify from 'dompurify';
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { StylePanel } from "./style-panel";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 const SAMPLE_DATA = {
   newsletter_title: "Weekly Tech Roundup",
@@ -29,17 +36,49 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [showBasicEditor, setShowBasicEditor] = useState(false);
+  const [styles, setStyles] = useState<Record<string, any>>({
+    body: {
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
+      fontSize: "16px",
+      color: "hsl(var(--foreground))",
+    },
+    h1: {
+      fontSize: "2rem",
+      color: "hsl(var(--primary))",
+      marginBottom: "1rem",
+    },
+    ".newsletter-section": {
+      padding: "1rem",
+      marginBottom: "1.5rem",
+    },
+    ".tweet": {
+      padding: "1rem",
+      backgroundColor: "hsl(var(--muted))",
+      borderRadius: "0.5rem",
+      marginBottom: "1rem",
+    },
+  });
+
   const { toast } = useToast();
 
   const form = useForm({
     resolver: zodResolver(insertTemplateSchema),
     defaultValues: {
       name: "",
+      category: "general",
       content: `<h1>{{newsletter_title}}</h1>
-<div class="content">
+<div class="newsletter-section">
   <p>Welcome to our newsletter!</p>
+</div>
+<div class="newsletter-section">
   {{tweets}}
 </div>`,
+      styles: styles,
+      sections: [],
+      variables: [
+        { name: "newsletter_title", type: "text", default: "My Newsletter" },
+        { name: "tweets", type: "content", default: "" },
+      ],
     },
   });
 
@@ -107,6 +146,28 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     });
   };
 
+  const handleStylesChange = (newStyles: Record<string, any>) => {
+    setStyles(newStyles);
+    form.setValue("styles", newStyles);
+
+    // Update preview with new styles
+    const styleSheet = Object.entries(newStyles)
+      .map(([selector, styles]) => {
+        const styleRules = Object.entries(styles)
+          .map(([prop, value]) => `${prop}: ${value};`)
+          .join(" ");
+        return `${selector} { ${styleRules} }`;
+      })
+      .join("\n");
+
+    const htmlWithStyles = `
+      <style>${styleSheet}</style>
+      ${form.getValues("content")}
+    `;
+
+    setPreviewHtml(DOMPurify.sanitize(htmlWithStyles));
+  };
+
   return (
     <div className="space-y-6">
       <DialogHeader>
@@ -115,111 +176,151 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Template Name</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter template name" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Template Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter template name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              {[
-                { label: "Newsletter Title", variable: "{{newsletter_title}}" },
-                { label: "Tweets Content", variable: "{{tweets}}" },
-              ].map((btn) => (
-                <Button
-                  key={btn.variable}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertVariable(btn.variable)}
-                  disabled={!isEditorReady && !showBasicEditor}
-                >
-                  Insert {btn.label}
-                </Button>
-              ))}
-            </div>
-
-            <Tabs defaultValue="edit">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="edit">Edit</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="edit">
-                <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <div className="relative min-h-[400px] border rounded-md">
-                          {!isEditorReady && !showBasicEditor && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-50">
-                              <Loader2 className="h-8 w-8 animate-spin" />
-                            </div>
-                          )}
-                          {showBasicEditor ? (
-                            <textarea
-                              className="w-full h-[400px] p-4 font-mono"
-                              value={field.value}
-                              onChange={(e) => handleEditorChange(e.target.value)}
-                            />
-                          ) : (
-                            <Editor
-                              apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
-                              onInit={(_, editor) => {
-                                setIsEditorReady(true);
-                              }}
-                              init={{
-                                height: 400,
-                                menubar: false,
-                                plugins: [
-                                  'link', 'lists', 'code'
-                                ],
-                                toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | code',
-                                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                                branding: false,
-                                resize: false,
-                                statusbar: false,
-                                setup: (editor) => {
-                                  editor.on('init', (e) => {
-                                    if (!e.target.initialized) {
-                                      handleEditorError();
-                                    }
-                                  });
-                                }
-                              }}
-                              value={field.value}
-                              onEditorChange={handleEditorChange}
-                            />
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-
-              <TabsContent value="preview">
-                <Card className="p-6">
-                  <div 
-                    className="preview-content prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: previewHtml }}
-                  />
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="tech">Technology</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
+
+          <div className="flex gap-2">
+            {VARIABLE_BUTTONS.map((btn) => (
+              <Button
+                key={btn.variable}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => insertVariable(btn.variable)}
+                disabled={!isEditorReady && !showBasicEditor}
+              >
+                Insert {btn.label}
+              </Button>
+            ))}
+          </div>
+
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={60}>
+              <Tabs defaultValue="edit">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="edit">Edit</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="edit">
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <div className="relative min-h-[400px] border rounded-md">
+                            {!isEditorReady && !showBasicEditor && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-50">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                              </div>
+                            )}
+                            {showBasicEditor ? (
+                              <textarea
+                                className="w-full h-[400px] p-4 font-mono"
+                                value={field.value}
+                                onChange={(e) => handleEditorChange(e.target.value)}
+                              />
+                            ) : (
+                              <Editor
+                                apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
+                                onInit={(_, editor) => {
+                                  setIsEditorReady(true);
+                                }}
+                                init={{
+                                  height: 400,
+                                  menubar: false,
+                                  plugins: [
+                                    'link', 'lists', 'code'
+                                  ],
+                                  toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | code',
+                                  content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                                  branding: false,
+                                  resize: false,
+                                  statusbar: false,
+                                  setup: (editor) => {
+                                    editor.on('init', (e) => {
+                                      if (!e.target.initialized) {
+                                        handleEditorError();
+                                      }
+                                    });
+                                  }
+                                }}
+                                value={field.value}
+                                onEditorChange={handleEditorChange}
+                              />
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                <TabsContent value="preview">
+                  <Card className="p-6">
+                    <div 
+                      className="preview-content prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: previewHtml }}
+                    />
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </ResizablePanel>
+
+            <ResizableHandle />
+
+            <ResizablePanel defaultSize={40}>
+              <div className="p-4 border-l h-full">
+                <h3 className="text-lg font-semibold mb-4">Style Customization</h3>
+                <StylePanel
+                  styles={styles}
+                  onStylesChange={handleStylesChange}
+                />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
 
           <div className="flex justify-end">
             <Button type="submit" disabled={createMutation.isPending}>
