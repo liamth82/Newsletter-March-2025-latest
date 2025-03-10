@@ -1,13 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Newsletter, Template } from "@shared/schema";
 import { Loader2 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
@@ -17,6 +20,32 @@ export default function Preview() {
   const { data: template, isLoading: loadingTemplate } = useQuery<Template>({
     queryKey: ["/api/templates", newsletter?.templateId],
     enabled: !!newsletter?.templateId,
+  });
+
+  const fetchTweetsMutation = useMutation({
+    mutationFn: async () => {
+      if (!newsletter?.keywords?.length) {
+        throw new Error("No keywords specified");
+      }
+      const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
+        keywords: newsletter.keywords
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData([`/api/newsletters/${id}`], data);
+      toast({
+        title: "Tweets fetched successfully",
+        description: "The newsletter content has been updated with new tweets.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to fetch tweets",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   if (loadingNewsletter || loadingTemplate) {
@@ -52,7 +81,7 @@ export default function Preview() {
   // Process tweet content for display
   const processedContent = template.content?.replace(
     "{{tweets}}",
-    newsletter.tweetContent
+    newsletter.tweetContent?.length
       ? newsletter.tweetContent
           .map((tweet: any) => `<div class="tweet">${tweet.text}</div>`)
           .join("")
@@ -68,6 +97,15 @@ export default function Preview() {
             <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             <div className="space-x-2">
               <Button variant="outline" onClick={() => window.history.back()}>Back</Button>
+              <Button 
+                onClick={() => fetchTweetsMutation.mutate()}
+                disabled={fetchTweetsMutation.isPending || !newsletter.keywords?.length}
+              >
+                {fetchTweetsMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Fetch Tweets
+              </Button>
               <Button>Schedule</Button>
             </div>
           </div>
