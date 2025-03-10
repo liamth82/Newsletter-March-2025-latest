@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Editor } from '@tinymce/tinymce-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Loader2, Upload, X } from "lucide-react";
+import { Loader2, Upload, X, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useState } from "react";
@@ -271,23 +271,57 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                           </button>
                         </div>
                       ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-12 w-12"
-                        onClick={() => {
-                          const url = window.prompt("Enter logo URL");
-                          if (url) {
-                            field.onChange([...field.value, url]);
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        id="logo-upload"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              if (event.target?.result) {
+                                field.onChange([...field.value, event.target.result]);
+                              }
+                            };
+                            reader.readAsDataURL(file);
                           }
+                          // Reset the input
+                          e.target.value = '';
                         }}
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-12 w-12"
+                          onClick={() => {
+                            document.getElementById('logo-upload')?.click();
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-12 flex-shrink-0"
+                          onClick={() => {
+                            const url = window.prompt("Enter logo URL");
+                            if (url) {
+                              field.onChange([...field.value, url]);
+                            }
+                          }}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          URL
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Add your brand logos to use in the newsletter template
+                      Upload logos from your computer or add them via URL
                     </p>
                   </div>
                 </FormControl>
