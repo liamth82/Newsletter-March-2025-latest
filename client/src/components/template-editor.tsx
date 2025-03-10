@@ -102,7 +102,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/templates", data);
-      return res.json();
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
