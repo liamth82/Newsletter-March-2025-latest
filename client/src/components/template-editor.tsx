@@ -28,13 +28,18 @@ const VARIABLE_BUTTONS = [
 export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [showBasicEditor, setShowBasicEditor] = useState(false);
   const { toast } = useToast();
 
   const form = useForm({
     resolver: zodResolver(insertTemplateSchema),
     defaultValues: {
       name: "",
-      content: "",
+      content: `<h1>{{newsletter_title}}</h1>
+<div class="content">
+  <p>Welcome to our newsletter!</p>
+  {{tweets}}
+</div>`,
     },
   });
 
@@ -62,25 +67,22 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
 
   const handleEditorChange = (content: string) => {
     form.setValue("content", content);
-
     // Update preview with sample data
     let previewContent = content;
-    Object.entries(SAMPLE_DATA).forEach(([key, value]) => {
+    Object.entries({
+      newsletter_title: "Weekly Tech Roundup",
+      tweets: `<div class="tweet">Sample Tweet #1</div><div class="tweet">Sample Tweet #2</div>`,
+    }).forEach(([key, value]) => {
       previewContent = previewContent.replace(
         new RegExp(`{{${key}}}`, 'g'),
         value
       );
     });
-
     setPreviewHtml(DOMPurify.sanitize(previewContent));
   };
 
-  const handleEditorInit = () => {
-    setIsEditorReady(true);
-  };
-
   const insertVariable = (variable: string) => {
-    if (!isEditorReady) {
+    if (!isEditorReady && !showBasicEditor) {
       toast({
         title: "Error",
         description: "Editor not ready. Please try again.",
@@ -94,6 +96,15 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
       editor.insertContent(variable);
       handleEditorChange(editor.getContent());
     }
+  };
+
+  const handleEditorError = () => {
+    setShowBasicEditor(true);
+    toast({
+      title: "Editor Initialization Failed",
+      description: "Switched to basic editor mode",
+      variant: "destructive",
+    });
   };
 
   return (
@@ -120,14 +131,17 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
 
           <div className="space-y-4">
             <div className="flex gap-2">
-              {VARIABLE_BUTTONS.map((btn) => (
+              {[
+                { label: "Newsletter Title", variable: "{{newsletter_title}}" },
+                { label: "Tweets Content", variable: "{{tweets}}" },
+              ].map((btn) => (
                 <Button
                   key={btn.variable}
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => insertVariable(btn.variable)}
-                  disabled={!isEditorReady}
+                  disabled={!isEditorReady && !showBasicEditor}
                 >
                   Insert {btn.label}
                 </Button>
@@ -148,38 +162,46 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                     <FormItem>
                       <FormControl>
                         <div className="relative min-h-[400px] border rounded-md">
-                          {!isEditorReady && (
+                          {!isEditorReady && !showBasicEditor && (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-50">
                               <Loader2 className="h-8 w-8 animate-spin" />
                             </div>
                           )}
-                          <Editor
-                            apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
-                            onInit={(_, editor) => {
-                              handleEditorInit();
-                              editor.setContent(`
-                                <h1>{{newsletter_title}}</h1>
-                                <div class="content">
-                                  <p>Welcome to our newsletter!</p>
-                                  {{tweets}}
-                                </div>
-                              `);
-                            }}
-                            init={{
-                              height: 400,
-                              menubar: false,
-                              plugins: [
-                                'link', 'lists', 'code'
-                              ],
-                              toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | code',
-                              content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                              branding: false,
-                              resize: false,
-                              statusbar: false,
-                            }}
-                            value={field.value}
-                            onEditorChange={handleEditorChange}
-                          />
+                          {showBasicEditor ? (
+                            <textarea
+                              className="w-full h-[400px] p-4 font-mono"
+                              value={field.value}
+                              onChange={(e) => handleEditorChange(e.target.value)}
+                            />
+                          ) : (
+                            <Editor
+                              apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
+                              onInit={(_, editor) => {
+                                setIsEditorReady(true);
+                              }}
+                              init={{
+                                height: 400,
+                                menubar: false,
+                                plugins: [
+                                  'link', 'lists', 'code'
+                                ],
+                                toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | code',
+                                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                                branding: false,
+                                resize: false,
+                                statusbar: false,
+                                setup: (editor) => {
+                                  editor.on('init', (e) => {
+                                    if (!e.target.initialized) {
+                                      handleEditorError();
+                                    }
+                                  });
+                                }
+                              }}
+                              value={field.value}
+                              onEditorChange={handleEditorChange}
+                            />
+                          )}
                         </div>
                       </FormControl>
                       <FormMessage />
