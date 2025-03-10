@@ -119,8 +119,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tweets = await searchTweets(req.body.keywords);
       console.log('Successfully fetched tweets:', tweets);
 
+      // Extract relevant tweet data before saving
+      const processedTweets = tweets.data.map(tweet => ({
+        id: tweet.id,
+        text: tweet.text,
+        created_at: tweet.created_at,
+        metrics: tweet.public_metrics
+      }));
+
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
-        tweetContent: tweets
+        tweetContent: processedTweets
       });
       res.json(newsletter);
     } catch (error) {

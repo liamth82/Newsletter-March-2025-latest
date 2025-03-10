@@ -84,7 +84,8 @@ export default function Preview() {
             `<div class="tweet">
               <p>${tweet.text}</p>
               <div class="text-sm text-muted-foreground mt-2">
-                ${new Date(tweet.created_at).toLocaleString()}
+                ${new Date(tweet.created_at).toLocaleTimeString()}
+                ${tweet.metrics ? ` • ${tweet.metrics.like_count} likes` : ''}
               </div>
             </div>`
           )
