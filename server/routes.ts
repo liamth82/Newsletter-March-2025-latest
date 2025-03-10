@@ -62,9 +62,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const overview = {
       totalNewsletters: newsletters.length,
       scheduledNewsletters: newsletters.filter(n => n.scheduleTime).length,
-      totalViews: analytics.reduce((sum, a) => sum + a.totalViews, 0),
+      totalViews: analytics.reduce((sum, a) => sum + (a.totalViews ?? 0), 0),
       avgEngagement: analytics.length ? 
-        Math.round(analytics.reduce((sum, a) => sum + (a.totalClicks / a.totalViews * 100), 0) / analytics.length) : 
+        Math.round(analytics.reduce((sum, a) => {
+          const views = a.totalViews ?? 0;
+          const clicks = a.totalClicks ?? 0;
+          return views > 0 ? sum + (clicks / views * 100) : sum;
+        }, 0) / analytics.length) : 
         0
     };
 

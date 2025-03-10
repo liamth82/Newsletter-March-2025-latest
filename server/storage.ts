@@ -135,8 +135,8 @@ export class MemStorage implements IStorage {
       if (existingAggregate) {
         const updatedAggregate: AnalyticsAggregate = {
           ...existingAggregate,
-          totalViews: event.eventType === 'view' ? existingAggregate.totalViews + 1 : existingAggregate.totalViews,
-          totalClicks: event.eventType === 'click' ? existingAggregate.totalClicks + 1 : existingAggregate.totalClicks,
+          totalViews: (existingAggregate.totalViews ?? 0) + (event.eventType === 'view' ? 1 : 0),
+          totalClicks: (existingAggregate.totalClicks ?? 0) + (event.eventType === 'click' ? 1 : 0),
           lastUpdated: new Date(),
         };
         this.analyticsAggregates.set(existingAggregate.id, updatedAggregate);
