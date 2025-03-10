@@ -34,7 +34,7 @@ export async function searchTweets(keywords: string[]) {
             'tweet.fields': ['created_at', 'public_metrics'],
           });
           console.log(`Raw response for ${keyword}:`, JSON.stringify(response));
-          return response.data || [];
+          return response._realData.data || [];
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
