@@ -119,13 +119,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tweets = await searchTweets(req.body.keywords);
       console.log('Successfully fetched tweets:', tweets);
 
-      // Extract relevant tweet data before saving
-      const processedTweets = tweets.map(tweet => ({
-        id: tweet.id,
-        text: tweet.text,
-        created_at: tweet.created_at,
-        metrics: tweet.public_metrics
-      }));
+      // Process tweets ensuring all required fields are present
+      const processedTweets = tweets.map(tweet => {
+        console.log('Processing tweet:', tweet);
+        return {
+          id: tweet.id,
+          text: tweet.text,
+          created_at: tweet.created_at,
+          metrics: {
+            retweet_count: tweet.public_metrics?.retweet_count || 0,
+            reply_count: tweet.public_metrics?.reply_count || 0,
+            like_count: tweet.public_metrics?.like_count || 0,
+            quote_count: tweet.public_metrics?.quote_count || 0
+          }
+        };
+      });
+
+      console.log('Processed tweets:', processedTweets);
 
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
         tweetContent: processedTweets

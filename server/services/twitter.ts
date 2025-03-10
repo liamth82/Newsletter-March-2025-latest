@@ -33,11 +33,18 @@ export async function searchTweets(keywords: string[]) {
             expansions: ['author_id'],
             'tweet.fields': ['created_at', 'public_metrics'],
           });
-          console.log(`Raw response for ${keyword}:`, response);
-          // Access the tweets using the correct property
-          const tweets = response._realData.data || [];
-          console.log('Extracted tweets:', tweets);
-          return tweets;
+
+          // Log the complete response structure
+          console.log(`Raw response structure for ${keyword}:`, {
+            data: response.data,
+            includes: response.includes,
+            meta: response.meta
+          });
+
+          // Get tweets from the paginated response
+          const tweetData = await response.fetchLast(10);
+          console.log(`Tweets fetched for ${keyword}:`, tweetData);
+          return tweetData;
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
