@@ -50,14 +50,14 @@ export default function Preview() {
   }
 
   // Process tweet content for display
-  const processedContent = template.content.replace(
+  const processedContent = template.content?.replace(
     "{{tweets}}",
     newsletter.tweetContent
       ? newsletter.tweetContent
           .map((tweet: any) => `<div class="tweet">${tweet.text}</div>`)
           .join("")
       : "<p>No tweets added yet.</p>"
-  );
+  ) || "No content available";
 
   return (
     <div className="flex min-h-screen">
