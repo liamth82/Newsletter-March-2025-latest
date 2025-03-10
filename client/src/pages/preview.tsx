@@ -14,7 +14,7 @@ export default function Preview() {
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
-    retry: 1, // Only retry once if the newsletter is not found
+    retry: 1,
   });
 
   const { data: template, isLoading: loadingTemplate } = useQuery<Template>({
@@ -25,7 +25,7 @@ export default function Preview() {
   const fetchTweetsMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
-        keywords: ["technology"] // Temporary hardcoded keyword for testing
+        keywords: ["technology"]
       });
       return res.json();
     },
@@ -75,18 +75,26 @@ export default function Preview() {
     );
   }
 
-  console.log('Newsletter content:', newsletter);
-  console.log('Template content:', template);
-  console.log('Tweet content:', newsletter.tweetContent);
-
-  // Start with the base template content
   let processedContent = template.content || '';
 
-  // Replace newsletter title if present
+  // Add styling to the content
+  const styleSheet = Object.entries(template.styles || {})
+    .map(([selector, styles]) => {
+      const styleRules = Object.entries(styles as Record<string, string>)
+        .map(([prop, value]) => `${prop}: ${value};`)
+        .join(" ");
+      return `${selector} { ${styleRules} }`;
+    })
+    .join("\n");
+
+  processedContent = `<style>${styleSheet}</style>${processedContent}`;
+
+  // Replace newsletter title
   processedContent = processedContent.replace(/{{newsletter_title}}/g, newsletter.title || 'Newsletter');
 
   // Handle tweet content replacement
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
+    console.log('Replacing tweets with:', newsletter.tweetContent);
     const tweetHtml = newsletter.tweetContent
       .map((tweet: any) => `
         <div class="tweet">
@@ -101,6 +109,7 @@ export default function Preview() {
 
     processedContent = processedContent.replace(/{{tweets}}/g, tweetHtml);
   } else {
+    console.log('No tweets found in newsletter content');
     processedContent = processedContent.replace(
       /{{tweets}}/g,
       `<div class="p-4 border rounded bg-muted">
