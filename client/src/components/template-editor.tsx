@@ -177,7 +177,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                   <FormItem>
                     <FormControl>
                       <Editor
-                        apiKey="no-api-key"
+                        apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
                         init={{
                           height: 500,
                           menubar: true,
