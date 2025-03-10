@@ -25,8 +25,11 @@ export default function Preview() {
   const fetchTweetsMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
-        keywords: ["technology"]
+        keywords: newsletter?.keywords || ["technology"]
       });
+      if (!res.ok) {
+        throw new Error('Failed to fetch tweets');
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -94,7 +97,7 @@ export default function Preview() {
 
   // Handle tweet content replacement
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    console.log('Replacing tweets with:', newsletter.tweetContent);
+    console.log('Tweet content available:', newsletter.tweetContent);
     const tweetHtml = newsletter.tweetContent
       .map((tweet: any) => `
         <div class="tweet">
@@ -109,7 +112,7 @@ export default function Preview() {
 
     processedContent = processedContent.replace(/{{tweets}}/g, tweetHtml);
   } else {
-    console.log('No tweets found in newsletter content');
+    console.log('No tweets found, newsletter data:', newsletter);
     processedContent = processedContent.replace(
       /{{tweets}}/g,
       `<div class="p-4 border rounded bg-muted">
