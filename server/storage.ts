@@ -1,4 +1,4 @@
-import { User, InsertUser, Template, Newsletter } from "@shared/schema";
+import { User, InsertUser, Template, Newsletter, AnalyticsEvent, AnalyticsAggregate } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -9,17 +9,21 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Template operations
   createTemplate(template: Omit<Template, "id" | "createdAt">): Promise<Template>;
   getTemplates(userId: number): Promise<Template[]>;
   getTemplate(id: number): Promise<Template | undefined>;
-  
+
   // Newsletter operations
   createNewsletter(newsletter: Omit<Newsletter, "id" | "createdAt" | "tweetContent">): Promise<Newsletter>;
   getNewsletters(userId: number): Promise<Newsletter[]>;
   updateNewsletter(id: number, data: Partial<Newsletter>): Promise<Newsletter>;
-  
+
+  // Analytics operations
+  createAnalyticsEvent(event: Omit<AnalyticsEvent, "id" | "timestamp">): Promise<AnalyticsEvent>;
+  getAnalyticsAggregates(userId: number): Promise<AnalyticsAggregate[]>;
+
   sessionStore: session.Store;
 }
 
@@ -27,6 +31,8 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private templates: Map<number, Template>;
   private newsletters: Map<number, Newsletter>;
+  private analyticsEvents: Map<number, AnalyticsEvent>;
+  private analyticsAggregates: Map<number, AnalyticsAggregate>;
   sessionStore: session.Store;
   private currentId: { [key: string]: number };
 
@@ -34,7 +40,15 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.templates = new Map();
     this.newsletters = new Map();
-    this.currentId = { users: 1, templates: 1, newsletters: 1 };
+    this.analyticsEvents = new Map();
+    this.analyticsAggregates = new Map();
+    this.currentId = { 
+      users: 1, 
+      templates: 1, 
+      newsletters: 1,
+      analyticsEvents: 1,
+      analyticsAggregates: 1 
+    };
     this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
   }
 
@@ -101,6 +115,57 @@ export class MemStorage implements IStorage {
     const updatedNewsletter = { ...newsletter, ...data };
     this.newsletters.set(id, updatedNewsletter);
     return updatedNewsletter;
+  }
+
+  async createAnalyticsEvent(event: Omit<AnalyticsEvent, "id" | "timestamp">): Promise<AnalyticsEvent> {
+    const id = this.currentId.analyticsEvents++;
+    const newEvent: AnalyticsEvent = {
+      ...event,
+      id,
+      timestamp: new Date(),
+    };
+    this.analyticsEvents.set(id, newEvent);
+
+    // Update aggregates
+    const newsletter = this.newsletters.get(event.newsletterId);
+    if (newsletter) {
+      const existingAggregate = Array.from(this.analyticsAggregates.values())
+        .find(agg => agg.newsletterId === event.newsletterId);
+
+      if (existingAggregate) {
+        const updatedAggregate: AnalyticsAggregate = {
+          ...existingAggregate,
+          totalViews: event.eventType === 'view' ? existingAggregate.totalViews + 1 : existingAggregate.totalViews,
+          totalClicks: event.eventType === 'click' ? existingAggregate.totalClicks + 1 : existingAggregate.totalClicks,
+          lastUpdated: new Date(),
+        };
+        this.analyticsAggregates.set(existingAggregate.id, updatedAggregate);
+      } else {
+        const newAggregate: AnalyticsAggregate = {
+          id: this.currentId.analyticsAggregates++,
+          newsletterId: event.newsletterId,
+          totalViews: event.eventType === 'view' ? 1 : 0,
+          uniqueViews: event.eventType === 'view' ? 1 : 0,
+          totalClicks: event.eventType === 'click' ? 1 : 0,
+          uniqueClicks: event.eventType === 'click' ? 1 : 0,
+          bounceRate: 0,
+          avgReadTime: 0,
+          lastUpdated: new Date(),
+        };
+        this.analyticsAggregates.set(newAggregate.id, newAggregate);
+      }
+    }
+
+    return newEvent;
+  }
+
+  async getAnalyticsAggregates(userId: number): Promise<AnalyticsAggregate[]> {
+    const userNewsletterIds = Array.from(this.newsletters.values())
+      .filter(n => n.userId === userId)
+      .map(n => n.id);
+
+    return Array.from(this.analyticsAggregates.values())
+      .filter(agg => userNewsletterIds.includes(agg.newsletterId));
   }
 }
 
