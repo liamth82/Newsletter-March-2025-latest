@@ -33,6 +33,31 @@ export const newsletters = pgTable("newsletters", {
   status: text("status").notNull().default('draft'),
   tweetContent: json("tweet_content").array(),
   createdAt: timestamp("created_at").defaultNow(),
+  sentAt: timestamp("sent_at"),
+  totalRecipients: integer("total_recipients").default(0),
+  deliveryStatus: text("delivery_status").default('pending'),
+});
+
+export const analyticsEvents = pgTable("analytics_events", {
+  id: serial("id").primaryKey(),
+  newsletterId: integer("newsletter_id").notNull(),
+  eventType: text("event_type").notNull(), // 'view', 'click', 'bounce'
+  eventData: json("event_data").default({}),
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const analyticsAggregates = pgTable("analytics_aggregates", {
+  id: serial("id").primaryKey(),
+  newsletterId: integer("newsletter_id").notNull(),
+  totalViews: integer("total_views").default(0),
+  uniqueViews: integer("unique_views").default(0),
+  totalClicks: integer("total_clicks").default(0),
+  uniqueClicks: integer("unique_clicks").default(0),
+  bounceRate: integer("bounce_rate").default(0),
+  avgReadTime: integer("avg_read_time").default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -58,7 +83,17 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   scheduleTime: true,
 });
 
+export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).pick({
+  newsletterId: true,
+  eventType: true,
+  eventData: true,
+  userAgent: true,
+  ipAddress: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type Newsletter = typeof newsletters.$inferSelect;
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type AnalyticsAggregate = typeof analyticsAggregates.$inferSelect;

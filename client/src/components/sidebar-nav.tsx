@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   LogOut,
+  BarChart,
 } from "lucide-react";
 
 export function SidebarNav() {
@@ -15,6 +16,7 @@ export function SidebarNav() {
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Templates", href: "/templates", icon: FileText },
+    { name: "Analytics", href: "/analytics", icon: BarChart },
   ];
 
   return (
@@ -22,7 +24,7 @@ export function SidebarNav() {
       <div className="flex h-16 items-center">
         <h2 className="text-lg font-semibold">Newsletter Generator</h2>
       </div>
-      
+
       <nav className="flex flex-1 flex-col">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
           <li>
