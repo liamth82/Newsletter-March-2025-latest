@@ -33,7 +33,7 @@ export async function searchTweets(keywords: string[]) {
             expansions: ['author_id'],
             'tweet.fields': ['created_at', 'public_metrics'],
           });
-          console.log(`Raw response for ${keyword}:`, JSON.stringify(response));
+          console.log(`Raw response for ${keyword}:`, response);
           // Access the tweets using the correct property
           const tweets = response._realData.data || [];
           console.log('Extracted tweets:', tweets);
