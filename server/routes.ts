@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertTemplateSchema, insertNewsletterSchema } from "@shared/schema";
+import { searchTweets } from "./services/twitter";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -90,20 +91,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(event);
   });
 
+  // Twitter Integration
   app.post("/api/newsletters/:id/tweets", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
-      // Here we would normally make the actual Twitter API call
-      // For now, we'll simulate tweet fetching based on keywords
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
-        tweetContent: [
-          { id: "1", text: "Sample tweet 1" },
-          { id: "2", text: "Sample tweet 2" }
-        ]
+        tweetContent: await searchTweets(req.body.keywords)
       });
       res.json(newsletter);
     } catch (error) {
+      console.error('Failed to fetch tweets:', error);
       res.status(500).json({ message: "Failed to fetch tweets" });
     }
   });
