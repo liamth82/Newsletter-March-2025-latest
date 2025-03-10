@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Editor } from '@tinymce/tinymce-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useState } from "react";
@@ -66,6 +66,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     defaultValues: {
       name: "",
       category: "general",
+      defaultTitle: "My Newsletter",
       content: `<h1>{{newsletter_title}}</h1>
 <div class="newsletter-section">
   <p>Welcome to our newsletter!</p>
@@ -79,6 +80,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
         { name: "newsletter_title", type: "text", default: "My Newsletter" },
         { name: "tweets", type: "content", default: "" },
       ],
+      logos: [],
     },
   });
 
@@ -109,7 +111,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     // Update preview with sample data
     let previewContent = content;
     Object.entries({
-      newsletter_title: "Weekly Tech Roundup",
+      newsletter_title: form.getValues("defaultTitle"),
       tweets: `<div class="tweet">Sample Tweet #1</div><div class="tweet">Sample Tweet #2</div>`,
     }).forEach(([key, value]) => {
       previewContent = previewContent.replace(
@@ -218,6 +220,81 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="defaultTitle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Default Newsletter Title</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    placeholder="Enter default newsletter title"
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      handleEditorChange(form.getValues("content"));
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="logos"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Brand Logos</FormLabel>
+                <FormControl>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {field.value.map((logo: string, index: number) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={logo}
+                            alt={`Logo ${index + 1}`}
+                            className="h-12 w-12 object-contain border rounded p-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLogos = [...field.value];
+                              newLogos.splice(index, 1);
+                              field.onChange(newLogos);
+                            }}
+                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hidden group-hover:block"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-12 w-12"
+                        onClick={() => {
+                          const url = window.prompt("Enter logo URL");
+                          if (url) {
+                            field.onChange([...field.value, url]);
+                          }
+                        }}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Add your brand logos to use in the newsletter template
+                    </p>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="flex gap-2">
             {VARIABLE_BUTTONS.map((btn) => (

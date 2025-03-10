@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface StylePanelProps {
   styles: Record<string, any>;
@@ -18,6 +19,8 @@ interface StylePanelProps {
 
 export function StylePanel({ styles, onStylesChange }: StylePanelProps) {
   const [selectedElement, setSelectedElement] = useState<string>("body");
+  const [customColor, setCustomColor] = useState<string>("#000000");
+  const [customBgColor, setCustomBgColor] = useState<string>("#ffffff");
 
   const updateStyle = (property: string, value: string) => {
     onStylesChange({
@@ -95,44 +98,82 @@ export function StylePanel({ styles, onStylesChange }: StylePanelProps) {
         </div>
 
         <div>
-          <Label>Color</Label>
-          <Select
-            value={styles[selectedElement]?.color || colorOptions[0].value}
-            onValueChange={(value) => updateStyle("color", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select color" />
-            </SelectTrigger>
-            <SelectContent>
-              {colorOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Text Color</Label>
+          <div className="flex gap-2">
+            <Select
+              value={styles[selectedElement]?.color === customColor ? "custom" : (styles[selectedElement]?.color || colorOptions[0].value)}
+              onValueChange={(value) => {
+                if (value === "custom") {
+                  updateStyle("color", customColor);
+                } else {
+                  updateStyle("color", value);
+                }
+              }}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select color" />
+              </SelectTrigger>
+              <SelectContent>
+                {colorOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="color"
+              value={customColor}
+              className="w-12 p-1 h-10"
+              onChange={(e) => {
+                setCustomColor(e.target.value);
+                if (styles[selectedElement]?.color === customColor) {
+                  updateStyle("color", e.target.value);
+                }
+              }}
+            />
+          </div>
         </div>
 
         <div>
           <Label>Background Color</Label>
-          <Select
-            value={styles[selectedElement]?.backgroundColor || "transparent"}
-            onValueChange={(value) => updateStyle("backgroundColor", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select background color" />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                { label: "None", value: "transparent" },
-                ...colorOptions,
-              ].map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select
+              value={styles[selectedElement]?.backgroundColor === customBgColor ? "custom" : (styles[selectedElement]?.backgroundColor || "transparent")}
+              onValueChange={(value) => {
+                if (value === "custom") {
+                  updateStyle("backgroundColor", customBgColor);
+                } else {
+                  updateStyle("backgroundColor", value);
+                }
+              }}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select background color" />
+              </SelectTrigger>
+              <SelectContent>
+                {[
+                  { label: "None", value: "transparent" },
+                  ...colorOptions,
+                ].map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="color"
+              value={customBgColor}
+              className="w-12 p-1 h-10"
+              onChange={(e) => {
+                setCustomBgColor(e.target.value);
+                if (styles[selectedElement]?.backgroundColor === customBgColor) {
+                  updateStyle("backgroundColor", e.target.value);
+                }
+              }}
+            />
+          </div>
         </div>
 
         <div>
@@ -143,6 +184,32 @@ export function StylePanel({ styles, onStylesChange }: StylePanelProps) {
             onChange={(e) => updateStyle("padding", e.target.value)}
             placeholder="e.g., 1rem, 10px 20px"
           />
+        </div>
+
+        <div>
+          <Label>Border</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="text"
+              value={styles[selectedElement]?.borderWidth || ""}
+              onChange={(e) => updateStyle("borderWidth", e.target.value)}
+              placeholder="Border width (e.g., 1px)"
+            />
+            <Select
+              value={styles[selectedElement]?.borderStyle || "none"}
+              onValueChange={(value) => updateStyle("borderStyle", value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Border style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="solid">Solid</SelectItem>
+                <SelectItem value="dashed">Dashed</SelectItem>
+                <SelectItem value="dotted">Dotted</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>

@@ -17,6 +17,8 @@ export const templates = pgTable("templates", {
   styles: json("styles").default({}),
   sections: json("sections").array().default([]),
   variables: json("variables").array().default([]),
+  defaultTitle: text("default_title"),
+  logos: json("logos").array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -44,6 +46,8 @@ export const insertTemplateSchema = createInsertSchema(templates).pick({
   styles: true,
   sections: true,
   variables: true,
+  defaultTitle: true,
+  logos: true,
 });
 
 export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
