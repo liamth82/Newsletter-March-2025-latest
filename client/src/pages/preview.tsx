@@ -8,9 +8,10 @@ import { Loader2 } from "lucide-react";
 
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
-  
+
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
+    retry: 1, // Only retry once if the newsletter is not found
   });
 
   const { data: template, isLoading: loadingTemplate } = useQuery<Template>({
@@ -34,13 +35,29 @@ export default function Preview() {
       <div className="flex min-h-screen">
         <SidebarNav />
         <main className="flex-1 p-8">
-          <div className="text-center text-muted-foreground">
-            Newsletter not found
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold mb-4">Newsletter Not Found</h1>
+            <p className="text-muted-foreground mb-8">
+              The newsletter you're looking for could not be found. It may have been deleted or the ID might be incorrect.
+            </p>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
           </div>
         </main>
       </div>
     );
   }
+
+  // Process tweet content for display
+  const processedContent = template.content.replace(
+    "{{tweets}}",
+    newsletter.tweetContent
+      ? newsletter.tweetContent
+          .map((tweet: any) => `<div class="tweet">${tweet.text}</div>`)
+          .join("")
+      : "<p>No tweets added yet.</p>"
+  );
 
   return (
     <div className="flex min-h-screen">
@@ -50,7 +67,7 @@ export default function Preview() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             <div className="space-x-2">
-              <Button variant="outline">Edit</Button>
+              <Button variant="outline" onClick={() => window.history.back()}>Back</Button>
               <Button>Schedule</Button>
             </div>
           </div>
@@ -58,19 +75,7 @@ export default function Preview() {
           <Card>
             <CardContent className="p-6">
               <div className="prose prose-lg max-w-none">
-                {/* Here we would inject the newsletter content with the tweets */}
-                <div dangerouslySetInnerHTML={{ __html: template.content }} />
-                
-                {newsletter.tweetContent && (
-                  <div className="mt-8 space-y-4">
-                    <h2>Curated Tweets</h2>
-                    {newsletter.tweetContent.map((tweet: any) => (
-                      <div key={tweet.id} className="border p-4 rounded-lg">
-                        {tweet.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div dangerouslySetInnerHTML={{ __html: processedContent }} />
               </div>
             </CardContent>
           </Card>

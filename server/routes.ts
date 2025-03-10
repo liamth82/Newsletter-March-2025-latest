@@ -53,6 +53,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(newsletters);
   });
 
+  app.get("/api/newsletters/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const newsletter = await storage.getNewsletter(parseInt(req.params.id));
+      if (!newsletter) {
+        return res.status(404).json({ message: "Newsletter not found" });
+      }
+      res.json(newsletter);
+    } catch (error) {
+      console.error('Error fetching newsletter:', error);
+      res.status(500).json({ message: "Failed to fetch newsletter" });
+    }
+  });
+
   // Analytics
   app.get("/api/analytics/overview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -64,12 +79,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalNewsletters: newsletters.length,
       scheduledNewsletters: newsletters.filter(n => n.scheduleTime).length,
       totalViews: analytics.reduce((sum, a) => sum + (a.totalViews ?? 0), 0),
-      avgEngagement: analytics.length ? 
+      avgEngagement: analytics.length ?
         Math.round(analytics.reduce((sum, a) => {
           const views = a.totalViews ?? 0;
           const clicks = a.totalClicks ?? 0;
           return views > 0 ? sum + (clicks / views * 100) : sum;
-        }, 0) / analytics.length) : 
+        }, 0) / analytics.length) :
         0
     };
 
