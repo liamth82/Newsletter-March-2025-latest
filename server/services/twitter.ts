@@ -9,14 +9,17 @@ const client = new TwitterApi({
 
 export async function searchTweets(keywords: string[]) {
   try {
+    console.log('Searching tweets for keywords:', keywords);
     const tweets = await Promise.all(
       keywords.map(async (keyword) => {
+        console.log(`Fetching tweets for keyword: ${keyword}`);
         const result = await client.v2.search({
           query: keyword,
           max_results: 10,
           "tweet.fields": ["created_at", "public_metrics", "author_id"],
         });
-        return result.data.data;
+        console.log(`Found ${result.data.data?.length || 0} tweets for ${keyword}`);
+        return result.data.data || [];
       })
     );
 
@@ -25,9 +28,10 @@ export async function searchTweets(keywords: string[]) {
       new Set(tweets.flat().map((t) => JSON.stringify(t)))
     ).map((t) => JSON.parse(t));
 
+    console.log('Total unique tweets found:', uniqueTweets.length);
     return uniqueTweets;
   } catch (error) {
-    console.error('Error fetching tweets:', error);
+    console.error('Error details:', error);
     throw new Error('Failed to fetch tweets');
   }
 }

@@ -111,8 +111,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
+      console.log('Fetching tweets for newsletter:', req.params.id, 'keywords:', req.body.keywords);
+      const tweets = await searchTweets(req.body.keywords);
+      console.log('Successfully fetched tweets:', tweets);
+
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
-        tweetContent: await searchTweets(req.body.keywords)
+        tweetContent: tweets
       });
       res.json(newsletter);
     } catch (error) {
