@@ -35,7 +35,7 @@ export async function searchTweets(keywords: string[]) {
           });
           console.log(`Raw response for ${keyword}:`, JSON.stringify(response));
           // Access the tweets using the correct property
-          const tweets = response.data || [];
+          const tweets = response._realData.data || [];
           console.log('Extracted tweets:', tweets);
           return tweets;
         } catch (error) {
