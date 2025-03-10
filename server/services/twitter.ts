@@ -34,8 +34,10 @@ export async function searchTweets(keywords: string[]) {
             'tweet.fields': ['created_at', 'public_metrics'],
           });
           console.log(`Raw response for ${keyword}:`, JSON.stringify(response));
-          // Access the tweets through the paginator's data property
-          return response.tweets || [];
+          // Access the tweets using the correct property
+          const tweets = response.data || [];
+          console.log('Extracted tweets:', tweets);
+          return tweets;
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
