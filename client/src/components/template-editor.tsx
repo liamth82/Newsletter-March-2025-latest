@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const SAMPLE_DATA = {
   newsletter_title: "Weekly Tech Roundup",
@@ -31,16 +32,7 @@ const VARIABLE_BUTTONS = [
   { label: "Tweets Content", variable: "{{tweets}}" },
 ];
 
-export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
-  const [previewHtml, setPreviewHtml] = useState<string>("");
-  const [isEditorReady, setIsEditorReady] = useState(false);
-  const { toast } = useToast();
-
-  const form = useForm({
-    resolver: zodResolver(insertTemplateSchema),
-    defaultValues: {
-      name: "",
-      content: `
+const DEFAULT_TEMPLATE = `
 <div class="newsletter">
   <div class="header">
     <h1>{{newsletter_title}}</h1>
@@ -95,7 +87,18 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   text-align: center;
   color: #666;
 }
-</style>`,
+</style>`;
+
+export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [isEditorReady, setIsEditorReady] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm({
+    resolver: zodResolver(insertTemplateSchema),
+    defaultValues: {
+      name: "",
+      content: DEFAULT_TEMPLATE,
     },
   });
 
@@ -155,110 +158,118 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}
-        className="space-y-6"
-      >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Template Name</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <>
+      <DialogHeader>
+        <DialogTitle>Edit Newsletter Template</DialogTitle>
+      </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            {VARIABLE_BUTTONS.map((btn) => (
-              <Button
-                key={btn.variable}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => insertVariable(btn.variable)}
-                disabled={!isEditorReady}
-              >
-                Insert {btn.label}
-              </Button>
-            ))}
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}
+          className="space-y-6"
+        >
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Template Name</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              {VARIABLE_BUTTONS.map((btn) => (
+                <Button
+                  key={btn.variable}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => insertVariable(btn.variable)}
+                  disabled={!isEditorReady}
+                >
+                  Insert {btn.label}
+                </Button>
+              ))}
+            </div>
+
+            <Tabs defaultValue="edit">
+              <TabsList>
+                <TabsTrigger value="edit">Edit</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="edit">
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="relative">
+                        {!isEditorReady && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-md z-10">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                          </div>
+                        )}
+                        <FormControl>
+                          <div className="relative min-h-[500px] border rounded-md">
+                            <Editor
+                              apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
+                              init={{
+                                height: 500,
+                                menubar: false,
+                                plugins: [
+                                  'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
+                                  'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                                  'insertdatetime', 'table', 'code', 'help', 'wordcount'
+                                ],
+                                toolbar: 'undo redo | formatselect | ' +
+                                  'bold italic forecolor | alignleft aligncenter ' +
+                                  'alignright alignjustify | bullist numlist | ' +
+                                  'removeformat code | help',
+                                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                                branding: false,
+                                promotion: false,
+                                statusbar: false,
+                                resize: false,
+                              }}
+                              value={field.value}
+                              onEditorChange={handleEditorChange}
+                              onInit={handleEditorInit}
+                            />
+                          </div>
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+
+              <TabsContent value="preview">
+                <Card className="p-6">
+                  <div 
+                    className="preview-content"
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <Tabs defaultValue="edit">
-            <TabsList>
-              <TabsTrigger value="edit">Edit</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="edit">
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="relative">
-                      {!isEditorReady && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-md">
-                          <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
-                      )}
-                      <FormControl>
-                        <div className="relative min-h-[500px]">
-                          <Editor
-                            apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
-                            init={{
-                              height: 500,
-                              menubar: true,
-                              plugins: [
-                                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                                'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                                'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-                              ],
-                              toolbar: 'undo redo | blocks | ' +
-                                'bold italic forecolor | alignleft aligncenter ' +
-                                'alignright alignjustify | bullist numlist outdent indent | ' +
-                                'removeformat | help',
-                              content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                              branding: false,
-                              promotion: false,
-                            }}
-                            value={field.value}
-                            onEditorChange={handleEditorChange}
-                            onInit={handleEditorInit}
-                          />
-                        </div>
-                      </FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </TabsContent>
-
-            <TabsContent value="preview">
-              <Card className="p-6">
-                <div 
-                  className="preview-content"
-                  dangerouslySetInnerHTML={{ __html: previewHtml }}
-                />
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={createMutation.isPending || !isEditorReady}>
-            {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Template
-          </Button>
-        </div>
-      </form>
-    </Form>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={createMutation.isPending || !isEditorReady}>
+              {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Template
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </>
   );
 }
