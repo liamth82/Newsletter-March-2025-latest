@@ -315,6 +315,37 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="layout"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Layout Style</FormLabel>
+                <FormControl>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => handleLayoutChange(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a layout" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PREDEFINED_LAYOUTS).map(([key, layout]) => (
+                        <SelectItem key={key} value={key}>
+                          {layout.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <p className="text-sm text-muted-foreground">
+                  Choose a pre-made layout for your newsletter
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -332,25 +363,24 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
 
             <FormField
               control={form.control}
-              name="layout"
+              name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Layout Style</FormLabel>
+                  <FormLabel>Category</FormLabel>
                   <Select
                     value={field.value}
-                    onValueChange={(value) => handleLayoutChange(value)}
+                    onValueChange={field.onChange}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a layout" />
+                        <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(PREDEFINED_LAYOUTS).map(([key, layout]) => (
-                        <SelectItem key={key} value={key}>
-                          {layout.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="tech">Technology</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
