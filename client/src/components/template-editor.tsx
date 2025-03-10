@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Editor } from '@tinymce/tinymce-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -31,6 +33,8 @@ const VARIABLE_BUTTONS = [
 
 export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [isEditorReady, setIsEditorReady] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm({
     resolver: zodResolver(insertTemplateSchema),
@@ -102,7 +106,18 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
+      toast({
+        title: "Success",
+        description: "Template saved successfully",
+      });
       onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -121,10 +136,21 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     setPreviewHtml(DOMPurify.sanitize(previewContent));
   };
 
+  const handleEditorInit = (evt: any, editor: any) => {
+    setIsEditorReady(true);
+  };
+
   const insertVariable = (variable: string) => {
-    const editor = (window as any).tinymce.activeEditor;
+    const editor = (window as any).tinymce?.activeEditor;
     if (editor) {
       editor.insertContent(variable);
+      handleEditorChange(editor.getContent());
+    } else {
+      toast({
+        title: "Error",
+        description: "Editor not ready. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -157,6 +183,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                 variant="outline"
                 size="sm"
                 onClick={() => insertVariable(btn.variable)}
+                disabled={!isEditorReady}
               >
                 Insert {btn.label}
               </Button>
@@ -176,6 +203,11 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
+                      {!isEditorReady && (
+                        <div className="flex items-center justify-center h-[500px] bg-muted/20 rounded-md">
+                          <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                      )}
                       <Editor
                         apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
                         init={{
@@ -190,10 +222,13 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                             'bold italic forecolor | alignleft aligncenter ' +
                             'alignright alignjustify | bullist numlist outdent indent | ' +
                             'removeformat | help',
-                          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+                          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                          branding: false,
+                          promotion: false,
                         }}
                         value={field.value}
                         onEditorChange={handleEditorChange}
+                        onInit={handleEditorInit}
                       />
                     </FormControl>
                     <FormMessage />
@@ -214,7 +249,8 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={createMutation.isPending}>
+          <Button type="submit" disabled={createMutation.isPending || !isEditorReady}>
+            {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Template
           </Button>
         </div>
