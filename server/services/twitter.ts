@@ -42,7 +42,9 @@ export async function searchTweets(keywords: string[]) {
           });
 
           // Extract tweets from the response data
-          return response.data.data || [];
+          const tweetData = response.data.data || [];
+          console.log('Extracted tweets:', tweetData);
+          return tweetData;
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
