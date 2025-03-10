@@ -24,11 +24,8 @@ export default function Preview() {
 
   const fetchTweetsMutation = useMutation({
     mutationFn: async () => {
-      if (!newsletter?.keywords?.length) {
-        throw new Error("No keywords specified");
-      }
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
-        keywords: newsletter.keywords
+        keywords: ["technology"] // Temporary hardcoded keyword for testing
       });
       return res.json();
     },
@@ -108,7 +105,7 @@ export default function Preview() {
               <Button variant="outline" onClick={() => window.history.back()}>Back</Button>
               <Button 
                 onClick={() => fetchTweetsMutation.mutate()}
-                disabled={fetchTweetsMutation.isPending || !newsletter.keywords?.length}
+                disabled={fetchTweetsMutation.isPending}
               >
                 {fetchTweetsMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
