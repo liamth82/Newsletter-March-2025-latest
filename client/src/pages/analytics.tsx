@@ -60,8 +60,8 @@ export default function Analytics() {
 
   const chartData: ChartData[] = analytics?.map((item) => ({
     name: `Newsletter #${item.newsletterId}`,
-    views: item.totalViews,
-    clicks: item.totalClicks,
+    views: item.totalViews ?? 0,
+    clicks: item.totalClicks ?? 0,
   })) || [];
 
   const deliveryData = newsletters?.reduce((acc: any[], newsletter) => {
