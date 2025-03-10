@@ -34,17 +34,15 @@ export async function searchTweets(keywords: string[]) {
             'tweet.fields': ['created_at', 'public_metrics'],
           });
 
-          // Log the complete response structure
+          // Log the complete response structure for debugging
           console.log(`Raw response structure for ${keyword}:`, {
             data: response.data,
             includes: response.includes,
             meta: response.meta
           });
 
-          // Get tweets from the paginated response
-          const tweetData = await response.fetchLast(10);
-          console.log(`Tweets fetched for ${keyword}:`, tweetData);
-          return tweetData;
+          // Extract tweets from the response data
+          return response.data.data || [];
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
