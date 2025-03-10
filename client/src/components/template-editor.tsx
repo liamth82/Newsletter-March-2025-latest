@@ -202,35 +202,39 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormControl>
+                    <div className="relative">
                       {!isEditorReady && (
-                        <div className="flex items-center justify-center h-[500px] bg-muted/20 rounded-md">
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-md">
                           <Loader2 className="h-8 w-8 animate-spin" />
                         </div>
                       )}
-                      <Editor
-                        apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
-                        init={{
-                          height: 500,
-                          menubar: true,
-                          plugins: [
-                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                            'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-                          ],
-                          toolbar: 'undo redo | blocks | ' +
-                            'bold italic forecolor | alignleft aligncenter ' +
-                            'alignright alignjustify | bullist numlist outdent indent | ' +
-                            'removeformat | help',
-                          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                          branding: false,
-                          promotion: false,
-                        }}
-                        value={field.value}
-                        onEditorChange={handleEditorChange}
-                        onInit={handleEditorInit}
-                      />
-                    </FormControl>
+                      <FormControl>
+                        <div className="relative min-h-[500px]">
+                          <Editor
+                            apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
+                            init={{
+                              height: 500,
+                              menubar: true,
+                              plugins: [
+                                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                                'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                                'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                              ],
+                              toolbar: 'undo redo | blocks | ' +
+                                'bold italic forecolor | alignleft aligncenter ' +
+                                'alignright alignjustify | bullist numlist outdent indent | ' +
+                                'removeformat | help',
+                              content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                              branding: false,
+                              promotion: false,
+                            }}
+                            value={field.value}
+                            onEditorChange={handleEditorChange}
+                            onInit={handleEditorInit}
+                          />
+                        </div>
+                      </FormControl>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
