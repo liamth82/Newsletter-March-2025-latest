@@ -10,16 +10,27 @@ const client = new TwitterApi({
 export async function searchTweets(keywords: string[]) {
   try {
     console.log('Searching tweets for keywords:', keywords);
+    // Ensure we have valid keywords
+    if (!keywords || keywords.length === 0) {
+      console.log('No keywords provided');
+      return [];
+    }
+
     const tweets = await Promise.all(
       keywords.map(async (keyword) => {
         console.log(`Fetching tweets for keyword: ${keyword}`);
-        const result = await client.v2.search({
-          query: keyword,
-          max_results: 10,
-          "tweet.fields": ["created_at", "public_metrics", "author_id"],
-        });
-        console.log(`Found ${result.data.data?.length || 0} tweets for ${keyword}`);
-        return result.data.data || [];
+        try {
+          const result = await client.v2.search({
+            query: keyword,
+            max_results: 10,
+            "tweet.fields": ["created_at", "public_metrics", "author_id"],
+          });
+          console.log(`Found ${result.data.data?.length || 0} tweets for ${keyword}`);
+          return result.data.data || [];
+        } catch (error) {
+          console.error(`Error searching for keyword "${keyword}":`, error);
+          return [];
+        }
       })
     );
 

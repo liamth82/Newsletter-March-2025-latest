@@ -112,6 +112,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       console.log('Fetching tweets for newsletter:', req.params.id, 'keywords:', req.body.keywords);
+      if (!req.body.keywords || !Array.isArray(req.body.keywords)) {
+        return res.status(400).json({ message: "Keywords must be provided as an array" });
+      }
+
       const tweets = await searchTweets(req.body.keywords);
       console.log('Successfully fetched tweets:', tweets);
 
