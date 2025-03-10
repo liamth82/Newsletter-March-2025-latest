@@ -120,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Successfully fetched tweets:', tweets);
 
       // Extract relevant tweet data before saving
-      const processedTweets = tweets.data.map(tweet => ({
+      const processedTweets = tweets.map(tweet => ({
         id: tweet.id,
         text: tweet.text,
         created_at: tweet.created_at,

@@ -28,13 +28,13 @@ export async function searchTweets(keywords: string[]) {
       keywords.map(async (keyword) => {
         console.log(`Fetching tweets for keyword: ${keyword}`);
         try {
-          const result = await appClient.v2.search(keyword, {
+          const response = await appClient.v2.search(keyword, {
             max_results: 10,
             expansions: ['author_id'],
             'tweet.fields': ['created_at', 'public_metrics'],
           });
-          console.log(`Found ${result.data.length || 0} tweets for ${keyword}`);
-          return result.data || [];
+          console.log(`Raw response for ${keyword}:`, JSON.stringify(response));
+          return response.data || [];
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
