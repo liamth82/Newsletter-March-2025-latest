@@ -30,7 +30,7 @@ export default function Preview() {
       if (!res.ok) {
         throw new Error('Failed to fetch tweets');
       }
-      return res.json();
+      return await res.json();
     },
     onSuccess: (data) => {
       queryClient.setQueryData([`/api/newsletters/${id}`], data);
