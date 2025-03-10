@@ -18,6 +18,7 @@ export interface IStorage {
   // Newsletter operations
   createNewsletter(newsletter: Omit<Newsletter, "id" | "createdAt" | "tweetContent">): Promise<Newsletter>;
   getNewsletters(userId: number): Promise<Newsletter[]>;
+  getNewsletter(id: number): Promise<Newsletter | undefined>;
   updateNewsletter(id: number, data: Partial<Newsletter>): Promise<Newsletter>;
 
   // Analytics operations
@@ -106,6 +107,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.newsletters.values()).filter(
       (newsletter) => newsletter.userId === userId,
     );
+  }
+
+  async getNewsletter(id: number): Promise<Newsletter | undefined> {
+    return this.newsletters.get(id);
   }
 
   async updateNewsletter(id: number, data: Partial<Newsletter>): Promise<Newsletter> {
