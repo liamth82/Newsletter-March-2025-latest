@@ -75,25 +75,50 @@ export default function Preview() {
     );
   }
 
-  // Process tweet content for display
-  const processedContent = template.content?.replace(
-    /{{tweets}}/g,
-    newsletter.tweetContent?.length
-      ? newsletter.tweetContent
-          .map((tweet: any) => 
-            `<div class="tweet">
-              <p>${tweet.text}</p>
-              <div class="text-sm text-muted-foreground mt-2">
-                ${new Date(tweet.created_at).toLocaleTimeString()}
-                ${tweet.metrics ? ` • ${tweet.metrics.like_count} likes` : ''}
-              </div>
-            </div>`
-          )
-          .join("")
-      : `<div class="p-4 border rounded bg-muted">
-          <p class="text-muted-foreground">No tweets found. Try updating your keywords or fetch tweets again.</p>
-         </div>`
-  ) || "No content available";
+  console.log('Newsletter content:', newsletter);
+  console.log('Template content:', template);
+  console.log('Tweet content:', newsletter.tweetContent);
+
+  // Start with the base template content
+  let processedContent = template.content || '';
+
+  // Replace newsletter title if present
+  processedContent = processedContent.replace(/{{newsletter_title}}/g, newsletter.title || 'Newsletter');
+
+  // Handle tweet content replacement
+  if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
+    const tweetHtml = newsletter.tweetContent
+      .map((tweet: any) => `
+        <div class="tweet">
+          <p>${tweet.text}</p>
+          <div class="text-sm text-muted-foreground mt-2">
+            ${new Date(tweet.created_at).toLocaleTimeString()}
+            ${tweet.metrics ? ` • ${tweet.metrics.like_count} likes` : ''}
+          </div>
+        </div>
+      `)
+      .join("");
+
+    processedContent = processedContent.replace(/{{tweets}}/g, tweetHtml);
+  } else {
+    processedContent = processedContent.replace(
+      /{{tweets}}/g,
+      `<div class="p-4 border rounded bg-muted">
+        <p class="text-muted-foreground">No tweets found. Try updating your keywords or fetch tweets again.</p>
+       </div>`
+    );
+  }
+
+  // Handle logo placeholder if present
+  if (template.logos && template.logos.length > 0) {
+    const logoHtml = template.logos
+      .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
+      .join("");
+    processedContent = processedContent.replace(
+      /{{#each logos}}.*?{{\/each}}/s,
+      logoHtml
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
