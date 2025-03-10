@@ -22,42 +22,163 @@ import {
 } from "@/components/ui/resizable";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
-const SAMPLE_DATA = {
-  newsletter_title: "Weekly Tech Roundup",
-  tweets: `<div class="tweet">Sample Tweet #1</div><div class="tweet">Sample Tweet #2</div>`,
+const PREDEFINED_LAYOUTS = {
+  custom: {
+    name: "Custom Layout",
+    content: `<h1>{{newsletter_title}}</h1>
+<div class="newsletter-section">
+  <p>Welcome to our newsletter!</p>
+</div>
+<div class="newsletter-section">
+  {{tweets}}
+</div>`,
+  },
+  classic: {
+    name: "Classic Layout",
+    content: `<div class="header">
+  <div class="logo-container">
+    {{#each logos}}
+      <img src="{{this}}" alt="Logo" class="logo" />
+    {{/each}}
+  </div>
+  <h1>{{newsletter_title}}</h1>
+</div>
+<div class="intro newsletter-section">
+  <p>Welcome to our latest newsletter. Here's what's new this week.</p>
+</div>
+<div class="main-content newsletter-section">
+  {{tweets}}
+</div>
+<div class="footer newsletter-section">
+  <p>Thanks for reading!</p>
+</div>`,
+  },
+  modern: {
+    name: "Modern Two-Column",
+    content: `<div class="header">
+  <div class="logo-container">
+    {{#each logos}}
+      <img src="{{this}}" alt="Logo" class="logo" />
+    {{/each}}
+  </div>
+  <h1>{{newsletter_title}}</h1>
+</div>
+<div class="intro newsletter-section">
+  <p>Welcome to our latest update. Stay informed with our curated content.</p>
+</div>
+<div class="two-column-layout">
+  <div class="column newsletter-section">
+    <h2>Featured Stories</h2>
+    {{tweets}}
+  </div>
+  <div class="column newsletter-section">
+    <h2>Quick Updates</h2>
+    <p>Stay tuned for more updates and announcements.</p>
+  </div>
+</div>`,
+  },
+  compact: {
+    name: "Compact Summary",
+    content: `<div class="compact-header">
+  <div class="logo-container">
+    {{#each logos}}
+      <img src="{{this}}" alt="Logo" class="logo" />
+    {{/each}}
+  </div>
+  <h1>{{newsletter_title}}</h1>
+</div>
+<div class="summary-section newsletter-section">
+  <h2>Key Updates</h2>
+  {{tweets}}
+</div>`,
+  },
+  magazine: {
+    name: "Magazine Style",
+    content: `<div class="magazine-header">
+  <div class="branding">
+    <div class="logo-container">
+      {{#each logos}}
+        <img src="{{this}}" alt="Logo" class="logo" />
+      {{/each}}
+    </div>
+    <h1>{{newsletter_title}}</h1>
+  </div>
+  <div class="issue-info newsletter-section">
+    <p>Your Weekly Industry Insights</p>
+  </div>
+</div>
+<div class="featured-story newsletter-section">
+  <h2>Featured Story</h2>
+  <div class="story-content">
+    {{tweets.[0]}}
+  </div>
+</div>
+<div class="stories-grid">
+  <div class="newsletter-section">
+    <h3>Industry News</h3>
+    {{tweets.[1]}}
+  </div>
+  <div class="newsletter-section">
+    <h3>Trending Topics</h3>
+    {{tweets.[2]}}
+  </div>
+  <div class="newsletter-section">
+    <h3>Expert Insights</h3>
+    {{tweets.[3]}}
+  </div>
+</div>`,
+  }
 };
 
-const VARIABLE_BUTTONS = [
-  { label: "Newsletter Title", variable: "{{newsletter_title}}" },
-  { label: "Tweets Content", variable: "{{tweets}}" },
-];
+const DEFAULT_STYLES = {
+  body: {
+    fontFamily: "ui-sans-serif, system-ui, sans-serif",
+    fontSize: "16px",
+    color: "hsl(var(--foreground))",
+  },
+  h1: {
+    fontSize: "2rem",
+    color: "hsl(var(--primary))",
+    marginBottom: "1rem",
+  },
+  ".newsletter-section": {
+    padding: "1rem",
+    marginBottom: "1.5rem",
+  },
+  ".tweet": {
+    padding: "1rem",
+    backgroundColor: "hsl(var(--muted))",
+    borderRadius: "0.5rem",
+    marginBottom: "1rem",
+  },
+  ".logo-container": {
+    display: "flex",
+    gap: "1rem",
+    alignItems: "center",
+    marginBottom: "1rem",
+  },
+  ".logo": {
+    maxHeight: "50px",
+    width: "auto",
+  },
+  ".two-column-layout": {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "2rem",
+  },
+  ".stories-grid": {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "1.5rem",
+    marginTop: "2rem",
+  },
+};
 
 export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [showBasicEditor, setShowBasicEditor] = useState(false);
-  const [styles, setStyles] = useState<Record<string, any>>({
-    body: {
-      fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      fontSize: "16px",
-      color: "hsl(var(--foreground))",
-    },
-    h1: {
-      fontSize: "2rem",
-      color: "hsl(var(--primary))",
-      marginBottom: "1rem",
-    },
-    ".newsletter-section": {
-      padding: "1rem",
-      marginBottom: "1.5rem",
-    },
-    ".tweet": {
-      padding: "1rem",
-      backgroundColor: "hsl(var(--muted))",
-      borderRadius: "0.5rem",
-      marginBottom: "1rem",
-    },
-  });
+  const [styles, setStyles] = useState<Record<string, any>>(DEFAULT_STYLES);
 
   const { toast } = useToast();
 
@@ -67,13 +188,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
       name: "",
       category: "general",
       defaultTitle: "My Newsletter",
-      content: `<h1>{{newsletter_title}}</h1>
-<div class="newsletter-section">
-  <p>Welcome to our newsletter!</p>
-</div>
-<div class="newsletter-section">
-  {{tweets}}
-</div>`,
+      content: PREDEFINED_LAYOUTS.classic.content,
       styles: styles,
       sections: [],
       variables: [
@@ -81,6 +196,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
         { name: "tweets", type: "content", default: "" },
       ],
       logos: [],
+      layout: "classic",
     },
   });
 
@@ -113,13 +229,34 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     Object.entries({
       newsletter_title: form.getValues("defaultTitle"),
       tweets: `<div class="tweet">Sample Tweet #1</div><div class="tweet">Sample Tweet #2</div>`,
+      logos: form.getValues("logos"),
     }).forEach(([key, value]) => {
-      previewContent = previewContent.replace(
-        new RegExp(`{{${key}}}`, 'g'),
-        value
-      );
+      if (key === "logos") {
+        // Handle the logos array
+        const logoHtml = (value as string[])
+          .map((logo) => `<img src="${logo}" alt="Logo" class="logo" />`)
+          .join("");
+        previewContent = previewContent.replace(
+          /{{#each logos}}.*?{{\/each}}/s,
+          logoHtml
+        );
+      } else {
+        previewContent = previewContent.replace(
+          new RegExp(`{{${key}}}`, 'g'),
+          value as string
+        );
+      }
     });
     setPreviewHtml(DOMPurify.sanitize(previewContent));
+  };
+
+  const handleLayoutChange = (layout: string) => {
+    const selectedLayout = PREDEFINED_LAYOUTS[layout as keyof typeof PREDEFINED_LAYOUTS];
+    if (selectedLayout) {
+      form.setValue("layout", layout);
+      form.setValue("content", selectedLayout.content);
+      handleEditorChange(selectedLayout.content);
+    }
   };
 
   const insertVariable = (variable: string) => {
@@ -195,24 +332,25 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
 
             <FormField
               control={form.control}
-              name="category"
+              name="layout"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Layout Style</FormLabel>
                   <Select
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => handleLayoutChange(value)}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder="Select a layout" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="tech">Technology</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="personal">Personal</SelectItem>
+                      {Object.entries(PREDEFINED_LAYOUTS).map(([key, layout]) => (
+                        <SelectItem key={key} value={key}>
+                          {layout.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -264,6 +402,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                               const newLogos = [...field.value];
                               newLogos.splice(index, 1);
                               field.onChange(newLogos);
+                              handleEditorChange(form.getValues("content"));
                             }}
                             className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hidden group-hover:block"
                           >
@@ -282,7 +421,9 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                             const reader = new FileReader();
                             reader.onload = (event) => {
                               if (event.target?.result) {
-                                field.onChange([...field.value, event.target.result]);
+                                const newLogos = [...field.value, event.target.result];
+                                field.onChange(newLogos);
+                                handleEditorChange(form.getValues("content"));
                               }
                             };
                             reader.readAsDataURL(file);
@@ -312,6 +453,7 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
                             const url = window.prompt("Enter logo URL");
                             if (url) {
                               field.onChange([...field.value, url]);
+                              handleEditorChange(form.getValues("content"));
                             }
                           }}
                         >
@@ -444,3 +586,8 @@ export function TemplateEditor({ onSuccess }: { onSuccess: () => void }) {
     </div>
   );
 }
+
+const VARIABLE_BUTTONS = [
+  { label: "Newsletter Title", variable: "{{newsletter_title}}" },
+  { label: "Tweets Content", variable: "{{tweets}}" },
+];
