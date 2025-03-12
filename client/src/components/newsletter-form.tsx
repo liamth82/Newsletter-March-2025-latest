@@ -57,33 +57,44 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        // Only send the fields that are in the insertNewsletterSchema
-        const formattedData = {
-          templateId: Number(data.templateId),
-          keywords: data.keywords,
-          scheduleTime: data.scheduleTime,
-          tweetFilters: data.tweetFilters,
-          narrativeSettings: {
-            style: data.narrativeSettings.style,
-            wordCount: Number(data.narrativeSettings.wordCount),
-            tone: data.narrativeSettings.tone,
-            paragraphCount: Number(data.narrativeSettings.paragraphCount)
-          }
-        };
+        const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
+        const method = newsletter ? "PATCH" : "POST";
 
-        console.log('Submitting newsletter data:', JSON.stringify(formattedData, null, 2));
+        // Log the request details
+        console.log(`Making ${method} request to ${url} with data:`, JSON.stringify(data, null, 2));
 
-        const res = await apiRequest(
-          newsletter ? "PATCH" : "POST",
-          newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
-          formattedData
-        );
+        // Make the request with minimal transformation
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            templateId: Number(data.templateId),
+            keywords: data.keywords,
+            scheduleTime: data.scheduleTime,
+            tweetFilters: data.tweetFilters,
+            narrativeSettings: data.narrativeSettings
+          })
+        });
+
+        // Log the response details
+        const responseText = await res.text();
+        console.log('Response status:', res.status);
+        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+        console.log('Response body:', responseText);
 
         if (!res.ok) {
-          throw new Error(`Server error: ${res.status}`);
+          throw new Error(`Failed to save newsletter: ${responseText}`);
         }
 
-        return await res.json();
+        // Try to parse the response as JSON
+        try {
+          return JSON.parse(responseText);
+        } catch (e) {
+          console.error('Failed to parse response as JSON:', e);
+          throw new Error('Invalid response from server');
+        }
       } catch (error) {
         console.error('Newsletter operation error:', error);
         throw error;
