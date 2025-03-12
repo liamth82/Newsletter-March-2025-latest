@@ -120,7 +120,7 @@ export default function Preview() {
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
       toast({
         title: "Success",
@@ -154,6 +154,10 @@ export default function Preview() {
         max-width: 800px;
         margin: 0 auto;
         padding: 2rem;
+      }
+      .newsletter-section {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
       }
       .narrative-content {
         background: white;
@@ -194,47 +198,45 @@ export default function Preview() {
     </style>
   `;
 
-  const baseTemplate = `
-    <div class="newsletter-content">
-      <div class="logo-container">
-        {{#each logos}}
-          <img src="{{this}}" alt="Logo" class="logo" />
-        {{/each}}
-      </div>
-      <h1>{{newsletter_title}}</h1>
-      <div class="newsletter-body">
-        {{tweets}}
-      </div>
-    </div>
-  `;
+  // Process the template content
+  let processedContent = template?.content || '';
 
-  const templateContent = template?.content || baseTemplate;
-
-  // Process logos
-  let processedContent = templateContent;
+  // Handle logos if present
   if (template?.logos?.length) {
     const logoHtml = template.logos
       .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
       .join('');
     processedContent = processedContent.replace(
-      /{{#each logos}}.*?{{\/each}}/s,
+      /{{#each logos}}[\s\S]*?{{\/each}}/g,
       logoHtml
+    );
+  } else {
+    // Remove the logo section if no logos
+    processedContent = processedContent.replace(
+      /<div class="logo-container">[\s\S]*?<\/div>/,
+      ''
     );
   }
 
-  // Process title and tweets
-  processedContent = processedContent
-    .replace(/{{newsletter_title}}/g, template?.defaultTitle || 'Newsletter Preview')
-    .replace(
-      /{{tweets}}/g,
-      generateNarrativeSummary(newsletter?.tweetContent || [], newsletter?.narrativeSettings || {
-        style: 'professional',
-        wordCount: 300,
-        tone: 'formal',
-        paragraphCount: 6
-      })
-    );
+  // Replace newsletter title
+  processedContent = processedContent.replace(
+    /{{newsletter_title}}/g,
+    template?.defaultTitle || 'Newsletter Preview'
+  );
 
+  // Generate and insert tweet content
+  const tweetContent = generateNarrativeSummary(
+    newsletter?.tweetContent || [],
+    newsletter?.narrativeSettings || {
+      style: 'professional',
+      wordCount: 300,
+      tone: 'formal',
+      paragraphCount: 6
+    }
+  );
+  processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
+
+  // Combine styles with content
   const finalContent = styles + processedContent;
 
   return (
