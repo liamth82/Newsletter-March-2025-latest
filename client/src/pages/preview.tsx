@@ -7,9 +7,7 @@ import { Newsletter, Template } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { TweetFilters } from "@/components/tweet-filters";
-import { NarrativeSettings, type NarrativeSettings as NarrativeSettingsType } from "@/components/narrative-settings";
-import { useState } from "react";
+import { NarrativeSettings as NarrativeSettingsType } from "@/components/narrative-settings";
 
 function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType) {
   if (!tweets || tweets.length === 0) {
@@ -58,7 +56,6 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType
     <div class="narrative-content">
       <div class="prose max-w-none">
         <h2 class="text-2xl font-semibold mb-4">Latest Updates</h2>
-
         ${cleanedTweets.reduce((content, tweet, index) => {
           // Only use the specified number of paragraphs
           if (index >= settings.paragraphCount) return content;
@@ -89,9 +86,8 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType
 
           return content + `<p class="mb-6 text-gray-700 leading-relaxed">${paragraph}</p>`;
         }, '')}
-
         <div class="text-sm text-muted-foreground mt-8">
-          Last updated: ${cleanedTweets[0].date.toLocaleString()}
+          Last updated: ${new Date().toLocaleString()}
         </div>
       </div>
     </div>
@@ -153,17 +149,21 @@ export default function Preview() {
 
   // Process the content
   const templateContent = template?.content || `
-    <div class="newsletter-content max-w-4xl mx-auto">
-      <h1 class="text-3xl font-bold mb-8">{{newsletter_title}}</h1>
-      {{tweets}}
+    <div class="newsletter-content">
+      <h1>{{newsletter_title}}</h1>
+      <div class="newsletter-body">
+        {{tweets}}
+      </div>
     </div>
   `;
 
-  // Add styling
   const styles = `
     <style>
       .newsletter-content {
         font-family: system-ui, -apple-system, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
       }
       .narrative-content {
         background: white;
@@ -182,10 +182,23 @@ export default function Preview() {
         color: #111827;
         margin-bottom: 1.5rem;
       }
+      .newsletter-body {
+        margin-top: 2rem;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #111827;
+        margin-bottom: 1.5rem;
+      }
     </style>
   `;
 
-  let finalContent = templateContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
+  let finalContent = templateContent.replace(
+    /{{newsletter_title}}/g, 
+    newsletter?.title || 'Newsletter Preview'
+  );
+
   finalContent = finalContent.replace(
     /{{tweets}}/g, 
     generateNarrativeSummary(newsletter?.tweetContent || [], newsletter?.narrativeSettings || {
