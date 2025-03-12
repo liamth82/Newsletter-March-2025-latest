@@ -14,32 +14,49 @@ function generateNarrativeSummary(tweets: any[]) {
     return '<p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p>';
   }
 
-  // Clean up tweet text and organize by author
+  // Clean and sort tweets by date
   const cleanedTweets = tweets.map(tweet => ({
     author: tweet.author_username,
     text: tweet.text
-      .replace(/RT @\w+: /, '') // Remove retweet prefix
-      .replace(/https:\/\/t\.co\/\w+/g, '') // Remove t.co links
-      .replace(/\n+/g, ' ') // Replace multiple newlines with space
+      .replace(/RT @\w+: /, '')
+      .replace(/https:\/\/t\.co\/\w+/g, '')
+      .replace(/\n+/g, ' ')
       .trim(),
     date: new Date(tweet.created_at)
-  }));
+  })).sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  // Sort tweets by date to get most recent first
-  cleanedTweets.sort((a, b) => b.date.getTime() - a.date.getTime());
-
-  // Generate narrative paragraphs
+  // Create a narrative summary
   const narrative = `
-    <div class="narrative-section">
-      <div class="prose">
-        ${cleanedTweets.map(tweet => {
-          // Create a sentence that naturally incorporates the source
+    <div class="narrative-content">
+      <div class="prose max-w-none">
+        <h2 class="text-2xl font-semibold mb-4">Latest Updates</h2>
+
+        ${cleanedTweets.reduce((content, tweet, index) => {
+          // Only use first 6 tweets for a concise summary
+          if (index >= 6) return content;
+
           const sentence = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
-          return `<p class="mb-4 text-gray-700 leading-relaxed">
-            According to @${tweet.author}, ${sentence}
-          </p>`;
-        }).join('\n')}
-        <div class="text-sm text-muted-foreground mt-4">
+          let paragraph = '';
+
+          // Add source attribution in a natural way
+          if (index === 0) {
+            paragraph = `In recent developments, ${tweet.author} reports that ${sentence} `;
+          } else if (index === cleanedTweets.length - 1 || index === 5) {
+            paragraph = `Finally, ${tweet.author} adds that ${sentence}`;
+          } else {
+            const transitions = [
+              `Meanwhile, ${tweet.author} notes that`,
+              `Additionally, according to ${tweet.author},`,
+              `${tweet.author} further reports that`,
+              `In related news, ${tweet.author} states that`
+            ];
+            paragraph = `${transitions[index % transitions.length]} ${sentence}`;
+          }
+
+          return content + `<p class="mb-6 text-gray-700 leading-relaxed">${paragraph}</p>`;
+        }, '')}
+
+        <div class="text-sm text-muted-foreground mt-8">
           Last updated: ${cleanedTweets[0].date.toLocaleString()}
         </div>
       </div>
@@ -100,46 +117,38 @@ export default function Preview() {
     );
   }
 
+  // Base template
+  const baseTemplate = `
+    <div class="newsletter-content max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-8">{{newsletter_title}}</h1>
+      {{tweets}}
+    </div>
+  `;
+
   // Add styling
   const styles = `
     <style>
       .newsletter-content {
-        max-width: 100%;
-        margin: 0 auto;
         font-family: system-ui, -apple-system, sans-serif;
       }
-      .narrative-section {
-        border-bottom: 1px solid #e2e8f0;
-        padding-bottom: 1.5rem;
+      .narrative-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+      }
+      .prose {
+        max-width: none;
+      }
+      .prose p {
+        margin-bottom: 1.5rem;
+        line-height: 1.8;
+        color: #374151;
+      }
+      .prose h2 {
+        color: #111827;
         margin-bottom: 1.5rem;
       }
-      .narrative-section:last-child {
-        border-bottom: none;
-      }
-      .narrative-section h3 {
-        color: #1a202c;
-      }
-      .narrative-section p {
-        line-height: 1.6;
-        margin-bottom: 1rem;
-        color: #4a5568;
-      }
-      .no-tweets-message {
-        padding: 2rem;
-        text-align: center;
-        background-color: #f8fafc;
-        border-radius: 0.5rem;
-        color: #64748b;
-      }
     </style>
-  `;
-
-  // Base template
-  const baseTemplate = `
-    <div class="newsletter-content">
-      <h1 class="text-3xl font-bold mb-6">{{newsletter_title}}</h1>
-      <div class="content-section">{{tweets}}</div>
-    </div>
   `;
 
   // Process the content
@@ -148,17 +157,14 @@ export default function Preview() {
 
   // Add tweet content
   if (newsletter?.tweetContent && Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    console.log('Processing tweets:', newsletter.tweetContent);
     const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
-    console.log('Generated narrative content:', narrativeContent);
     finalContent = finalContent.replace(/{{tweets}}/g, narrativeContent);
   } else {
-    console.log('No tweets available in newsletter');
     finalContent = finalContent.replace(
       /{{tweets}}/g,
-      `<div class="no-tweets-message">
-        <p>No tweets available. Click "Fetch Tweets" to load content.</p>
-      </div>`
+      `<div class="no-tweets-message p-8 text-center bg-gray-50 rounded-lg">
+        <p class="text-gray-600">No tweets available. Click "Fetch Tweets" to load content.</p>
+       </div>`
     );
   }
 
@@ -195,7 +201,7 @@ export default function Preview() {
           <Card>
             <CardContent className="p-6">
               <div
-                className="preview-content prose max-w-none"
+                className="preview-content"
                 dangerouslySetInnerHTML={{ __html: styles + finalContent }}
               />
             </CardContent>
