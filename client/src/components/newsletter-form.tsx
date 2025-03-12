@@ -55,18 +55,34 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       console.log('Submitting newsletter data:', data);
-      const res = await apiRequest(
-        newsletter ? "PATCH" : "POST",
-        newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
-        data
-      );
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to save newsletter');
+      try {
+        const res = await apiRequest(
+          newsletter ? "PATCH" : "POST",
+          newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
+          data
+        );
+
+        // Check if response is OK
+        if (!res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const error = await res.json();
+            throw new Error(error.message || 'Failed to save newsletter');
+          } else {
+            // Handle non-JSON error responses
+            const text = await res.text();
+            throw new Error(`Server error: ${res.status}`);
+          }
+        }
+
+        const result = await res.json();
+        return result;
+      } catch (error) {
+        console.error('Newsletter operation error:', error);
+        throw error;
       }
-      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
       toast({
         title: "Success",
@@ -80,7 +96,6 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         description: error.message,
         variant: "destructive",
       });
-      console.error('Newsletter operation error:', error);
     },
   });
 

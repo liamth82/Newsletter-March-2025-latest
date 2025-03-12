@@ -131,8 +131,15 @@ export default function Preview() {
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, requestData);
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to fetch tweets');
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to fetch tweets');
+        } else {
+          // Handle non-JSON error responses
+          const text = await res.text();
+          throw new Error(`Server error: ${res.status}`);
+        }
       }
 
       const data = await res.json();
