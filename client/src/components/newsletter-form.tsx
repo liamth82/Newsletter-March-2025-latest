@@ -57,8 +57,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        // Format the data according to the schema
-        const payload = {
+        // Validate and transform the data
+        const formattedData = {
           templateId: Number(data.templateId),
           keywords: Array.isArray(data.keywords) ? data.keywords : [],
           scheduleTime: data.scheduleTime,
@@ -71,23 +71,21 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
           },
           narrativeSettings: {
-            style: String(data.narrativeSettings?.style || 'professional'),
+            style: data.narrativeSettings?.style || 'professional',
             wordCount: Number(data.narrativeSettings?.wordCount || 300),
-            tone: String(data.narrativeSettings?.tone || 'formal'),
+            tone: data.narrativeSettings?.tone || 'formal',
             paragraphCount: Number(data.narrativeSettings?.paragraphCount || 6)
           }
         };
 
-        console.log('Submitting newsletter data:', JSON.stringify(payload, null, 2));
+        console.log('Submitting newsletter data:', JSON.stringify(formattedData, null, 2));
 
-        // Make the API request
         const res = await apiRequest(
           newsletter ? "PATCH" : "POST",
           newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
-          payload
+          formattedData
         );
 
-        // Handle the response
         if (!res.ok) {
           const contentType = res.headers.get("content-type");
           let errorMessage;
@@ -109,7 +107,6 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           throw new Error(errorMessage || 'Failed to save newsletter');
         }
 
-        // Parse the successful response
         const result = await res.json();
         console.log('Server response:', result);
         return result;

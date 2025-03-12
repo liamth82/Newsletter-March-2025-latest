@@ -107,6 +107,13 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   scheduleTime: true,
   tweetFilters: true,
   narrativeSettings: true,
+}).extend({
+  narrativeSettings: z.object({
+    style: z.enum(['professional', 'casual', 'storytelling']),
+    wordCount: z.number().min(100).max(1000),
+    tone: z.enum(['formal', 'conversational']),
+    paragraphCount: z.number().min(1).max(10)
+  })
 });
 
 export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).pick({
