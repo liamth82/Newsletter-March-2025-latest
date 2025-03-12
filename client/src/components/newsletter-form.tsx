@@ -57,46 +57,45 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (formData: any) => {
       try {
+        // Ensure narrative settings match the schema exactly
+        const narrativeSettings = {
+          style: formData.narrativeSettings.style,
+          wordCount: Number(formData.narrativeSettings.wordCount),
+          tone: formData.narrativeSettings.tone,
+          paragraphCount: Number(formData.narrativeSettings.paragraphCount)
+        };
+
+        // Only include the fields defined in the schema
         const payload = {
           templateId: Number(formData.templateId),
           keywords: formData.keywords,
           scheduleTime: formData.scheduleTime,
           tweetFilters: formData.tweetFilters,
-          narrativeSettings: formData.narrativeSettings
+          narrativeSettings
         };
 
-        console.log('Request payload:', JSON.stringify(payload, null, 2));
+        // Validate the payload against the schema
+        const validatedData = insertNewsletterSchema.parse(payload);
 
-        const res = await apiRequest(
-          newsletter ? "PATCH" : "POST",
-          newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
-          payload
-        );
+        const method = newsletter ? "PATCH" : "POST";
+        const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
+
+        console.log(`${method} request to ${url}:`, JSON.stringify(validatedData, null, 2));
+
+        const res = await apiRequest(method, url, validatedData);
 
         if (!res.ok) {
-          const contentType = res.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const error = await res.json();
-            throw new Error(error.message);
-          } else {
-            // For non-JSON errors, try to get a meaningful message
-            const text = await res.text();
-            if (text.includes("<!DOCTYPE html>")) {
-              throw new Error("Server error - please try again");
-            } else {
-              throw new Error(text || `Server error: ${res.status}`);
-            }
-          }
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to save newsletter');
         }
 
-        const responseData = await res.json();
-        return responseData;
+        return await res.json();
       } catch (error: any) {
         console.error('Newsletter operation error:', error);
-        throw new Error(error.message || 'Failed to process request');
+        throw new Error(error.message || 'Failed to save newsletter');
       }
     },
-    onSuccess: (responseData) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
       toast({
         title: "Success",
