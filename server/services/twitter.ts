@@ -41,8 +41,8 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       queryParts.push('-is:retweet');
     }
     if (filters.safeMode) {
-      queryParts.push('-has:links'); // Exclude tweets with links as they might be spam
-      queryParts.push('lang:en'); // Only English tweets for better content filtering
+      queryParts.push('-has:links -has:mentions'); // Exclude tweets with links and mentions
+      queryParts.push('lang:en'); // Only English tweets
     }
 
     const tweets = await Promise.all(
@@ -51,19 +51,18 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
         try {
           const response = await appClient.v2.search(keyword, {
             max_results: 10,
-            expansions: ['author_id', 'referenced_tweets'],
+            expansions: ['author_id'],
             'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
             'user.fields': ['verified', 'public_metrics'],
           });
 
-          console.log(`Raw response structure for ${keyword}:`, {
-            data: response.data,
-            includes: response.includes,
-            meta: response.meta
-          });
+          if (!response.data.data) {
+            console.log(`No tweets found for keyword: ${keyword}`);
+            return [];
+          }
 
           // Filter tweets based on criteria
-          const tweets = response.data.data || [];
+          const tweets = response.data.data;
           const users = response.data.includes?.users || [];
 
           const filteredTweets = tweets.filter(tweet => {
@@ -90,7 +89,7 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
             return true;
           });
 
-          console.log('Filtered tweets:', filteredTweets);
+          console.log(`Found ${filteredTweets.length} filtered tweets for keyword: ${keyword}`);
           return filteredTweets;
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
