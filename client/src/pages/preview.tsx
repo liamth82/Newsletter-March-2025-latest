@@ -100,11 +100,18 @@ export default function Preview() {
     console.log('Tweet content available:', newsletter.tweetContent);
     const tweetHtml = newsletter.tweetContent
       .map((tweet: any) => `
-        <div class="tweet">
-          <p>${tweet.text}</p>
-          <div class="text-sm text-muted-foreground mt-2">
-            ${new Date(tweet.created_at).toLocaleTimeString()}
-            ${tweet.metrics ? ` • ${tweet.metrics.like_count} likes` : ''}
+        <div class="tweet bg-muted p-4 mb-4 rounded-lg shadow">
+          <div class="tweet-content">
+            <p class="text-foreground text-base mb-2">${tweet.text}</p>
+            <div class="tweet-metadata flex items-center gap-2 text-sm text-muted-foreground">
+              <span>${new Date(tweet.created_at).toLocaleString()}</span>
+              ${tweet.metrics ? `
+                <span>•</span>
+                <span>${tweet.metrics.like_count} likes</span>
+                <span>•</span>
+                <span>${tweet.metrics.retweet_count} retweets</span>
+              ` : ''}
+            </div>
           </div>
         </div>
       `)
@@ -120,6 +127,30 @@ export default function Preview() {
        </div>`
     );
   }
+
+  // Add base styling for tweet elements
+  const additionalStyles = `
+    <style>
+      .tweet {
+        border: 1px solid hsl(var(--border));
+        transition: all 0.2s ease-in-out;
+      }
+      .tweet:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .tweet-content {
+        word-break: break-word;
+      }
+      .tweet-metadata {
+        border-top: 1px solid hsl(var(--border));
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+      }
+    </style>
+  `;
+
+  processedContent = additionalStyles + processedContent;
 
   // Handle logo placeholder if present
   if (template.logos && template.logos.length > 0) {
