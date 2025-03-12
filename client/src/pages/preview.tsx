@@ -216,6 +216,7 @@ export default function Preview() {
   );
 }
 
+// Update the generateNarrativeSummary function with better type safety
 function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
   if (!tweets || tweets.length === 0) {
     return '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
@@ -234,7 +235,7 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
     }))
     .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  const transitions = {
+  const transitions: Record<NarrativeSettings['style'], string[]> = {
     professional: [
       "Furthermore, %author% indicates that",
       "According to %author%'s analysis,",
@@ -255,9 +256,20 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
     ]
   };
 
-  const getTransition = (style: string, index: number) => {
-    const styleTransitions = transitions[style as keyof typeof transitions] || transitions.professional;
-    return styleTransitions[index % styleTransitions.length];
+  const openings: Record<NarrativeSettings['style'], string> = {
+    professional: "In recent developments, %author% reports that",
+    casual: "Here's what's new: %author% tells us that",
+    storytelling: "Our story begins as %author% reveals that"
+  };
+
+  const conclusions: Record<NarrativeSettings['style'], string> = {
+    professional: "Finally, %author% concludes that",
+    casual: "To wrap things up, %author% adds that",
+    storytelling: "The story concludes as %author% shares that"
+  };
+
+  const getTransition = (style: NarrativeSettings['style'], index: number) => {
+    return transitions[style][index % transitions[style].length];
   };
 
   const paragraphs = cleanedTweets
@@ -267,25 +279,16 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
       let paragraph = '';
 
       if (index === 0) {
-        const openings = {
-          professional: `In recent developments, ${tweet.author} reports that`,
-          casual: `Here's what's new: ${tweet.author} tells us that`,
-          storytelling: `Our story begins as ${tweet.author} reveals that`
-        };
-        paragraph = `${openings[settings.style as keyof typeof openings] || openings.professional} ${sentence}`;
+        paragraph = openings[settings.style].replace('%author%', tweet.author) + ' ' + sentence;
       } else if (index === settings.paragraphCount - 1) {
-        const conclusions = {
-          professional: `Finally, ${tweet.author} concludes that`,
-          casual: `To wrap things up, ${tweet.author} adds that`,
-          storytelling: `The story concludes as ${tweet.author} shares that`
-        };
-        paragraph = `${conclusions[settings.style as keyof typeof conclusions] || conclusions.professional} ${sentence}`;
+        paragraph = conclusions[settings.style].replace('%author%', tweet.author) + ' ' + sentence;
       } else {
         const transition = getTransition(settings.style, index).replace('%author%', tweet.author);
         paragraph = `${transition} ${sentence}`;
       }
 
-      return `<p class="mb-6 text-gray-700 leading-relaxed">${paragraph}</p>`;
+      const toneClass = settings.tone === 'formal' ? 'text-gray-800' : 'text-gray-700';
+      return `<p class="mb-6 ${toneClass} leading-relaxed">${paragraph}</p>`;
     })
     .join('\n');
 

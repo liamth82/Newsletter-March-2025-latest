@@ -2,23 +2,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-
-export type NarrativeStyle = 'professional' | 'casual' | 'storytelling';
-export type NarrativeTone = 'formal' | 'conversational';
-
-export interface NarrativeSettings {
-  style: NarrativeStyle;
-  wordCount: number;
-  tone: NarrativeTone;
-  paragraphCount: number;
-}
+import { NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
 
 interface NarrativeSettingsProps {
-  settings?: NarrativeSettings;
-  onChange: (settings: NarrativeSettings) => void;
+  settings?: NarrativeSettingsType;
+  onChange: (settings: NarrativeSettingsType) => void;
 }
 
-const defaultSettings: NarrativeSettings = {
+const defaultSettings: NarrativeSettingsType = {
   style: 'professional',
   wordCount: 300,
   tone: 'formal',
@@ -26,27 +17,15 @@ const defaultSettings: NarrativeSettings = {
 };
 
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
-  const handleChange = (key: keyof NarrativeSettings, value: any) => {
+  const handleChange = (key: keyof NarrativeSettingsType, value: any) => {
     const currentSettings = { ...defaultSettings, ...settings };
-    const newSettings = { ...currentSettings };
+    const newSettings = { ...currentSettings, [key]: value };
 
-    switch (key) {
-      case 'style':
-        if (['professional', 'casual', 'storytelling'].includes(value)) {
-          newSettings.style = value as NarrativeStyle;
-        }
-        break;
-      case 'tone':
-        if (['formal', 'conversational'].includes(value)) {
-          newSettings.tone = value as NarrativeTone;
-        }
-        break;
-      case 'wordCount':
-        newSettings.wordCount = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
-        break;
-      case 'paragraphCount':
-        newSettings.paragraphCount = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
-        break;
+    // Validate and normalize numeric values
+    if (key === 'wordCount') {
+      newSettings.wordCount = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
+    } else if (key === 'paragraphCount') {
+      newSettings.paragraphCount = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
     }
 
     onChange(newSettings);
