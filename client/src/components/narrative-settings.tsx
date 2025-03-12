@@ -15,9 +15,19 @@ interface NarrativeSettingsProps {
   onChange: (settings: NarrativeSettings) => void;
 }
 
-export function NarrativeSettings({ settings, onChange }: NarrativeSettingsProps) {
+const defaultSettings: NarrativeSettings = {
+  style: 'professional',
+  wordCount: 300,
+  tone: 'formal',
+  paragraphCount: 6
+};
+
+export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
   const handleChange = (key: keyof NarrativeSettings, value: any) => {
-    onChange({ ...settings, [key]: value });
+    onChange({
+      ...settings,
+      [key]: value
+    });
   };
 
   return (

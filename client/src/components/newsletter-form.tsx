@@ -20,6 +20,13 @@ interface NewsletterFormProps {
   newsletter?: Newsletter | null;
 }
 
+const defaultNarrativeSettings = {
+  style: 'professional',
+  wordCount: 300,
+  tone: 'formal',
+  paragraphCount: 6
+};
+
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const { toast } = useToast();
@@ -34,7 +41,6 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       templateId: newsletter?.templateId || undefined,
       keywords: newsletter?.keywords || [],
       scheduleTime: newsletter?.scheduleTime || null,
-      status: newsletter?.status || 'draft',
       tweetFilters: newsletter?.tweetFilters || {
         verifiedOnly: false,
         minFollowers: 0,
@@ -43,12 +49,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: true,
         newsOutlets: []
       },
-      narrativeSettings: newsletter?.narrativeSettings || {
-        style: 'professional',
-        wordCount: 300,
-        tone: 'formal',
-        paragraphCount: 6
-      }
+      narrativeSettings: newsletter?.narrativeSettings || defaultNarrativeSettings
     },
   });
 
@@ -71,6 +72,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           } else {
             // Handle non-JSON error responses
             const text = await res.text();
+            console.error('Server returned:', text);
             throw new Error(`Server error: ${res.status}`);
           }
         }
