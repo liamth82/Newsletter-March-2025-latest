@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Templates from "@/pages/templates";
 import Preview from "@/pages/preview";
 import Analytics from "@/pages/analytics";
+import Sectors from "@/pages/sectors";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <ProtectedRoute path="/templates" component={Templates} />
       <ProtectedRoute path="/preview/:id" component={Preview} />
       <ProtectedRoute path="/analytics" component={Analytics} />
+      <ProtectedRoute path="/sectors" component={Sectors} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
