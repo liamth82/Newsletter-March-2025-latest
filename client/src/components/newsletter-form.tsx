@@ -55,14 +55,14 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (formData: any) => {
       try {
         const payload = {
-          templateId: Number(data.templateId),
-          keywords: data.keywords,
-          scheduleTime: data.scheduleTime,
-          tweetFilters: data.tweetFilters,
-          narrativeSettings: data.narrativeSettings
+          templateId: Number(formData.templateId),
+          keywords: formData.keywords,
+          scheduleTime: formData.scheduleTime,
+          tweetFilters: formData.tweetFilters,
+          narrativeSettings: formData.narrativeSettings
         };
 
         console.log('Request payload:', JSON.stringify(payload, null, 2));
@@ -89,14 +89,14 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           }
         }
 
-        const data = await res.json();
-        return data;
+        const responseData = await res.json();
+        return responseData;
       } catch (error: any) {
         console.error('Newsletter operation error:', error);
         throw new Error(error.message || 'Failed to process request');
       }
     },
-    onSuccess: (data) => {
+    onSuccess: (responseData) => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
       toast({
         title: "Success",
