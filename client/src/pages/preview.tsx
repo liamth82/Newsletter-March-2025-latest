@@ -14,50 +14,39 @@ function generateNarrativeSummary(tweets: any[]) {
     return '<p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p>';
   }
 
-  // Group tweets by source
-  const sections = tweets.reduce((acc: any, tweet: any) => {
-    const source = tweet.author_username || 'Unknown Source';
-    if (!acc[source]) {
-      acc[source] = [];
-    }
-    acc[source].push(tweet);
-    return acc;
-  }, {});
+  // Clean up tweet text and organize by author
+  const cleanedTweets = tweets.map(tweet => ({
+    author: tweet.author_username,
+    text: tweet.text
+      .replace(/RT @\w+: /, '') // Remove retweet prefix
+      .replace(/https:\/\/t\.co\/\w+/g, '') // Remove t.co links
+      .replace(/\n+/g, ' ') // Replace multiple newlines with space
+      .trim(),
+    date: new Date(tweet.created_at)
+  }));
 
-  // Generate narrative sections
-  let narrative = '';
-  Object.entries(sections).forEach(([source, sourceTweets]: [string, any]) => {
-    const tweets = sourceTweets as any[];
-    if (tweets.length > 0) {
-      // Combine similar tweets into coherent paragraphs
-      const topics = tweets.reduce((acc: string[], tweet: any) => {
-        // Clean the tweet text
-        const text = tweet.text
-          .replace(/RT @\w+: /, '') // Remove retweet prefix
-          .replace(/https:\/\/t\.co\/\w+/g, '') // Remove t.co links
-          .trim();
+  // Sort tweets by date to get most recent first
+  cleanedTweets.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-        acc.push(text);
-        return acc;
-      }, []);
-
-      narrative += `
-        <div class="narrative-section mb-6">
-          <h3 class="text-lg font-semibold mb-2">Latest from @${source}</h3>
-          <div class="prose">
-            <p class="mb-4 text-gray-700 leading-relaxed">
-              ${topics.join(' ')}
-            </p>
-            <div class="text-sm text-muted-foreground mt-2">
-              Last updated: ${new Date(tweets[0].created_at).toLocaleString()}
-            </div>
-          </div>
+  // Generate narrative paragraphs
+  const narrative = `
+    <div class="narrative-section">
+      <div class="prose">
+        ${cleanedTweets.map(tweet => {
+          // Create a sentence that naturally incorporates the source
+          const sentence = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
+          return `<p class="mb-4 text-gray-700 leading-relaxed">
+            According to @${tweet.author}, ${sentence}
+          </p>`;
+        }).join('\n')}
+        <div class="text-sm text-muted-foreground mt-4">
+          Last updated: ${cleanedTweets[0].date.toLocaleString()}
         </div>
-      `;
-    }
-  });
+      </div>
+    </div>
+  `;
 
-  return narrative || '<p class="text-muted-foreground">No content available from selected sources.</p>';
+  return narrative;
 }
 
 export default function Preview() {
