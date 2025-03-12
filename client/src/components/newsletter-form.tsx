@@ -11,11 +11,16 @@ import { NarrativeSettings } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
-import { Template } from "@shared/schema";
+import { Newsletter, Template } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
+interface NewsletterFormProps {
+  onSuccess: () => void;
+  newsletter?: Newsletter | null;
+}
+
+export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const { toast } = useToast();
 
@@ -26,14 +31,11 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
   const form = useForm({
     resolver: zodResolver(insertNewsletterSchema),
     defaultValues: {
-      templateId: undefined,
-      keywords: [],
-      scheduleTime: null,
-      status: 'draft',
-      sentAt: null,
-      totalRecipients: null,
-      deliveryStatus: null,
-      tweetFilters: {
+      templateId: newsletter?.templateId || undefined,
+      keywords: newsletter?.keywords || [],
+      scheduleTime: newsletter?.scheduleTime || null,
+      status: newsletter?.status || 'draft',
+      tweetFilters: newsletter?.tweetFilters || {
         verifiedOnly: false,
         minFollowers: 0,
         excludeReplies: false,
@@ -41,7 +43,7 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
         safeMode: true,
         newsOutlets: []
       },
-      narrativeSettings: {
+      narrativeSettings: newsletter?.narrativeSettings || {
         style: 'professional',
         wordCount: 300,
         tone: 'formal',
@@ -53,10 +55,14 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       console.log('Submitting newsletter data:', data);
-      const res = await apiRequest("POST", "/api/newsletters", data);
+      const res = await apiRequest(
+        newsletter ? "PATCH" : "POST",
+        newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
+        data
+      );
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to create newsletter');
+        throw new Error(error.message || 'Failed to save newsletter');
       }
       return res.json();
     },
@@ -64,7 +70,7 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
       toast({
         title: "Success",
-        description: "Newsletter created successfully",
+        description: `Newsletter ${newsletter ? 'updated' : 'created'} successfully`,
       });
       onSuccess();
     },
@@ -74,7 +80,7 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
         description: error.message,
         variant: "destructive",
       });
-      console.error('Newsletter creation error:', error);
+      console.error('Newsletter operation error:', error);
     },
   });
 
@@ -184,7 +190,7 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
             Schedule
           </Button>
           <Button type="submit" disabled={createMutation.isPending}>
-            Create Newsletter
+            {newsletter ? 'Update' : 'Create'} Newsletter
           </Button>
         </div>
       </form>
