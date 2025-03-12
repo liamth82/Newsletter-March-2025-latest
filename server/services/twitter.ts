@@ -53,76 +53,68 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       queryParts.push('lang:en');
     }
 
-    // Query for each keyword and filter results
-    const tweets = await Promise.all(
-      queryParts.map(async (keyword) => {
-        console.log(`Fetching tweets for keyword: ${keyword}`);
-        try {
-          const response = await appClient.v2.search(keyword, {
-            max_results: 20, // Increased to get more content for summarization
-            expansions: ['author_id'],
-            'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
-            'user.fields': ['verified', 'public_metrics', 'username'],
-          });
+    const query = queryParts.join(' ');
+    console.log('Final query:', query);
 
-          if (!response.data.data) {
-            console.log(`No tweets found for keyword: ${keyword}`);
-            return [];
-          }
+    // Fetch tweets
+    const response = await appClient.v2.search(query, {
+      max_results: 20,
+      expansions: ['author_id'],
+      'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
+      'user.fields': ['verified', 'public_metrics', 'username'],
+    });
 
-          // Filter tweets based on criteria
-          const tweets = response.data.data;
-          const users = response.data.includes?.users || [];
+    if (!response.data.data) {
+      console.log('No tweets found for query');
+      return [];
+    }
 
-          const filteredTweets = tweets.filter(tweet => {
-            const author = users.find(u => u.id === tweet.author_id);
+    // Filter tweets based on criteria
+    const tweets = response.data.data;
+    const users = response.data.includes?.users || [];
 
-            // Skip if we can't find author info
-            if (!author) return false;
+    const filteredTweets = tweets.filter(tweet => {
+      const author = users.find(u => u.id === tweet.author_id);
 
-            // Check minimum followers if specified
-            if (filters.minFollowers && author.public_metrics?.followers_count < filters.minFollowers) {
-              return false;
-            }
+      // Skip if we can't find author info
+      if (!author) return false;
 
-            // Additional content filtering in safe mode
-            if (filters.safeMode) {
-              const lowercaseText = tweet.text.toLowerCase();
-              // Basic profanity check (expand this list as needed)
-              const profanityList = ['fuck', 'shit', 'damn', 'ass'];
-              if (profanityList.some(word => lowercaseText.includes(word))) {
-                return false;
-              }
-            }
-
-            return true;
-          });
-
-          // Add author username to tweet objects
-          return filteredTweets.map(tweet => {
-            const author = users.find(u => u.id === tweet.author_id);
-            return {
-              ...tweet,
-              author_username: author?.username
-            };
-          });
-        } catch (error) {
-          console.error(`Error searching for keyword "${keyword}":`, error);
-          return [];
+      // Check minimum followers if specified
+      if (filters.minFollowers && author.public_metrics?.followers_count) {
+        if (author.public_metrics.followers_count < filters.minFollowers) {
+          return false;
         }
-      })
-    );
+      }
 
-    // Flatten and deduplicate tweets
-    const uniqueTweets = Array.from(
-      new Set(tweets.flat().map((t) => JSON.stringify(t)))
-    ).map((t) => JSON.parse(t));
+      // Additional content filtering in safe mode
+      if (filters.safeMode) {
+        const lowercaseText = tweet.text.toLowerCase();
+        // Basic profanity check (expand this list as needed)
+        const profanityList = ['fuck', 'shit', 'damn', 'ass'];
+        if (profanityList.some(word => lowercaseText.includes(word))) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Add author username to tweet objects
+    const processedTweets = filteredTweets.map(tweet => {
+      const author = users.find(u => u.id === tweet.author_id);
+      return {
+        ...tweet,
+        author_username: author?.username
+      };
+    });
 
     // Sort tweets by creation date
-    uniqueTweets.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    processedTweets.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-    console.log('Total unique tweets found:', uniqueTweets.length);
-    return uniqueTweets;
+    console.log('Total tweets found:', processedTweets.length);
+    return processedTweets;
   } catch (error) {
     console.error('Error details:', error);
     throw new Error('Failed to fetch tweets');
