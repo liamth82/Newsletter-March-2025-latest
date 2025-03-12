@@ -2,6 +2,22 @@ import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export type TweetFilters = {
+  verifiedOnly: boolean;
+  minFollowers: number;
+  excludeReplies: boolean;
+  excludeRetweets: boolean;
+  safeMode: boolean;
+  newsOutlets: string[];
+};
+
+export type NarrativeSettings = {
+  style: 'professional' | 'casual' | 'storytelling';
+  wordCount: number;
+  tone: 'formal' | 'conversational';
+  paragraphCount: number;
+};
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -36,7 +52,7 @@ export const newsletters = pgTable("newsletters", {
   sentAt: timestamp("sent_at"),
   totalRecipients: integer("total_recipients").default(0),
   deliveryStatus: text("delivery_status").default('pending'),
-  tweetFilters: json("tweet_filters").default({
+  tweetFilters: json("tweet_filters").$type<TweetFilters>().default({
     verifiedOnly: false,
     minFollowers: 0,
     excludeReplies: false,
@@ -44,7 +60,7 @@ export const newsletters = pgTable("newsletters", {
     safeMode: true,
     newsOutlets: []
   }),
-  narrativeSettings: json("narrative_settings").default({
+  narrativeSettings: json("narrative_settings").$type<NarrativeSettings>().default({
     style: 'professional',
     wordCount: 300,
     tone: 'formal',
