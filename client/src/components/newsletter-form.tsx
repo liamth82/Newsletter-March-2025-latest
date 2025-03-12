@@ -57,24 +57,17 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        // Validate and transform the data
+        // Only send the fields that are in the insertNewsletterSchema
         const formattedData = {
           templateId: Number(data.templateId),
-          keywords: Array.isArray(data.keywords) ? data.keywords : [],
+          keywords: data.keywords,
           scheduleTime: data.scheduleTime,
-          tweetFilters: {
-            verifiedOnly: Boolean(data.tweetFilters?.verifiedOnly),
-            minFollowers: Number(data.tweetFilters?.minFollowers || 0),
-            excludeReplies: Boolean(data.tweetFilters?.excludeReplies),
-            excludeRetweets: Boolean(data.tweetFilters?.excludeRetweets),
-            safeMode: Boolean(data.tweetFilters?.safeMode),
-            newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
-          },
+          tweetFilters: data.tweetFilters,
           narrativeSettings: {
-            style: data.narrativeSettings?.style || 'professional',
-            wordCount: Number(data.narrativeSettings?.wordCount || 300),
-            tone: data.narrativeSettings?.tone || 'formal',
-            paragraphCount: Number(data.narrativeSettings?.paragraphCount || 6)
+            style: data.narrativeSettings.style,
+            wordCount: Number(data.narrativeSettings.wordCount),
+            tone: data.narrativeSettings.tone,
+            paragraphCount: Number(data.narrativeSettings.paragraphCount)
           }
         };
 
@@ -87,29 +80,10 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         );
 
         if (!res.ok) {
-          const contentType = res.headers.get("content-type");
-          let errorMessage;
-
-          try {
-            if (contentType && contentType.includes("application/json")) {
-              const error = await res.json();
-              errorMessage = error.message;
-            } else {
-              const text = await res.text();
-              console.error('Non-JSON error response:', text);
-              errorMessage = `Server error (${res.status})`;
-            }
-          } catch (parseError) {
-            console.error('Error parsing response:', parseError);
-            errorMessage = 'Failed to parse server response';
-          }
-
-          throw new Error(errorMessage || 'Failed to save newsletter');
+          throw new Error(`Server error: ${res.status}`);
         }
 
-        const result = await res.json();
-        console.log('Server response:', result);
-        return result;
+        return await res.json();
       } catch (error) {
         console.error('Newsletter operation error:', error);
         throw error;
