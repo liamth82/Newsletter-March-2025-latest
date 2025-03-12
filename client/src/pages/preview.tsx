@@ -8,8 +8,10 @@ import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { TweetFilters } from "@/components/tweet-filters";
+import { NarrativeSettings, type NarrativeSettings as NarrativeSettingsType } from "@/components/narrative-settings";
+import { useState } from "react";
 
-function generateNarrativeSummary(tweets: any[]) {
+function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType) {
   if (!tweets || tweets.length === 0) {
     return '<p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p>';
   }
@@ -25,6 +27,32 @@ function generateNarrativeSummary(tweets: any[]) {
     date: new Date(tweet.created_at)
   })).sort((a, b) => b.date.getTime() - a.date.getTime());
 
+  // Get transition phrases based on style and tone
+  const getTransitions = () => {
+    if (settings.style === 'professional' && settings.tone === 'formal') {
+      return [
+        "Furthermore, %author% indicates that",
+        "According to %author%'s analysis,",
+        "As reported by %author%,",
+        "%author% emphasizes that"
+      ];
+    } else if (settings.style === 'storytelling') {
+      return [
+        "The story continues as %author% reveals",
+        "Adding to the narrative, %author% shares",
+        "In an interesting twist, %author% notes",
+        "The plot thickens when %author% explains"
+      ];
+    } else {
+      return [
+        "Meanwhile, %author% says",
+        "%author% chimes in with",
+        "%author% also mentions that",
+        "Adding to this, %author% points out"
+      ];
+    }
+  };
+
   // Create a narrative summary
   const narrative = `
     <div class="narrative-content">
@@ -32,25 +60,31 @@ function generateNarrativeSummary(tweets: any[]) {
         <h2 class="text-2xl font-semibold mb-4">Latest Updates</h2>
 
         ${cleanedTweets.reduce((content, tweet, index) => {
-          // Only use first 6 tweets for a concise summary
-          if (index >= 6) return content;
+          // Only use the specified number of paragraphs
+          if (index >= settings.paragraphCount) return content;
 
           const sentence = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
           let paragraph = '';
 
-          // Add source attribution in a natural way
+          // Add source attribution in a style-appropriate way
           if (index === 0) {
-            paragraph = `In recent developments, ${tweet.author} reports that ${sentence} `;
-          } else if (index === cleanedTweets.length - 1 || index === 5) {
-            paragraph = `Finally, ${tweet.author} adds that ${sentence}`;
+            const openings = {
+              professional: `In recent developments, ${tweet.author} reports that`,
+              casual: `Here's what's new: ${tweet.author} tells us that`,
+              storytelling: `Our story begins as ${tweet.author} reveals that`
+            };
+            paragraph = `${openings[settings.style]} ${sentence}`;
+          } else if (index === settings.paragraphCount - 1) {
+            const conclusions = {
+              professional: `Finally, ${tweet.author} concludes that`,
+              casual: `To wrap things up, ${tweet.author} adds that`,
+              storytelling: `The story concludes as ${tweet.author} shares that`
+            };
+            paragraph = `${conclusions[settings.style]} ${sentence}`;
           } else {
-            const transitions = [
-              `Meanwhile, ${tweet.author} notes that`,
-              `Additionally, according to ${tweet.author},`,
-              `${tweet.author} further reports that`,
-              `In related news, ${tweet.author} states that`
-            ];
-            paragraph = `${transitions[index % transitions.length]} ${sentence}`;
+            const transitions = getTransitions();
+            const transition = transitions[index % transitions.length].replace('%author%', tweet.author);
+            paragraph = `${transition} ${sentence}`;
           }
 
           return content + `<p class="mb-6 text-gray-700 leading-relaxed">${paragraph}</p>`;
@@ -69,6 +103,12 @@ function generateNarrativeSummary(tweets: any[]) {
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const [narrativeSettings, setNarrativeSettings] = useState<NarrativeSettingsType>({
+    style: 'professional',
+    wordCount: 300,
+    tone: 'formal',
+    paragraphCount: 6
+  });
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
@@ -155,18 +195,9 @@ export default function Preview() {
   const templateContent = template?.content || baseTemplate;
   let finalContent = templateContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
 
-  // Add tweet content
-  if (newsletter?.tweetContent && Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
-    finalContent = finalContent.replace(/{{tweets}}/g, narrativeContent);
-  } else {
-    finalContent = finalContent.replace(
-      /{{tweets}}/g,
-      `<div class="no-tweets-message p-8 text-center bg-gray-50 rounded-lg">
-        <p class="text-gray-600">No tweets available. Click "Fetch Tweets" to load content.</p>
-       </div>`
-    );
-  }
+
+  finalContent = finalContent.replace(/{{tweets}}/g, generateNarrativeSummary(newsletter?.tweetContent || [], narrativeSettings));
+
 
   return (
     <div className="flex min-h-screen">
@@ -180,6 +211,10 @@ export default function Preview() {
             <div className="space-y-4">
               <TweetFilters
                 onFiltersChange={(filters) => fetchTweetsMutation.mutate(filters)}
+              />
+              <NarrativeSettings
+                settings={narrativeSettings}
+                onChange={setNarrativeSettings}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => window.history.back()}>
@@ -202,7 +237,9 @@ export default function Preview() {
             <CardContent className="p-6">
               <div
                 className="preview-content"
-                dangerouslySetInnerHTML={{ __html: styles + finalContent }}
+                dangerouslySetInnerHTML={{
+                  __html: styles + finalContent
+                }}
               />
             </CardContent>
           </Card>
