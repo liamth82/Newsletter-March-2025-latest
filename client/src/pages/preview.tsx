@@ -24,8 +24,6 @@ function generateNarrativeSummary(tweets: any[]) {
     return acc;
   }, {});
 
-  console.log('Grouped tweets by source:', sections);
-
   // Generate narrative paragraphs
   let narrative = '';
   Object.entries(sections).forEach(([source, sourceTweets]: [string, any]) => {
@@ -56,16 +54,12 @@ export default function Preview() {
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
-    retry: 1,
   });
 
   const { data: template, isLoading: loadingTemplate } = useQuery<Template>({
     queryKey: [`/api/templates/${newsletter?.templateId}`],
     enabled: !!newsletter?.templateId,
   });
-
-  console.log('Newsletter data:', newsletter);
-  console.log('Template data:', template);
 
   const fetchTweetsMutation = useMutation({
     mutationFn: async (filters: any) => {
@@ -112,7 +106,6 @@ export default function Preview() {
   }
 
   if (!newsletter || !template) {
-    console.log('Newsletter or template missing:', { newsletter, template });
     return (
       <div className="flex min-h-screen">
         <SidebarNav />
@@ -130,33 +123,6 @@ export default function Preview() {
       </div>
     );
   }
-
-  // Ensure template content exists and is a string
-  if (!template.content || typeof template.content !== 'string') {
-    console.error('Invalid template content:', template.content);
-    return (
-      <div className="flex min-h-screen">
-        <SidebarNav />
-        <main className="flex-1 p-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold mb-4">Invalid Template</h1>
-            <p className="text-muted-foreground mb-8">
-              The template content appears to be invalid. Please check the template configuration.
-            </p>
-            <Button variant="outline" onClick={() => window.history.back()}>
-              Go Back
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  console.log('Template Content:', {
-    id: template.id,
-    content: template.content,
-    newsletterId: newsletter.id
-  });
 
   // Process the template content
   let processedContent = template.content;
@@ -193,12 +159,10 @@ export default function Preview() {
 
   // Process tweets
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    console.log('Processing tweets:', newsletter.tweetContent);
     const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
-    console.log('Generated narrative content:', narrativeContent);
+    console.log('Generated narrative:', narrativeContent);
     processedContent = processedContent.replace(/{{tweets}}/g, narrativeContent);
   } else {
-    console.log('No tweets found in newsletter');
     processedContent = processedContent.replace(
       /{{tweets}}/g,
       `<div class="no-tweets-message">
@@ -208,7 +172,6 @@ export default function Preview() {
   }
 
   const finalContent = styles + processedContent;
-  console.log('Final content length:', finalContent.length);
 
   return (
     <div className="flex min-h-screen">
