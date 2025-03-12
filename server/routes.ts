@@ -116,7 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minFollowers: parseInt(req.body.minFollowers) || 0,
         excludeReplies: req.body.excludeReplies === true,
         excludeRetweets: req.body.excludeRetweets === true,
-        safeMode: req.body.safeMode === true
+        safeMode: req.body.safeMode === true,
+        newsOutlets: req.body.newsOutlets || []
       };
 
       const tweets = await searchTweets(req.body.keywords, filters);
@@ -127,6 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: tweet.id,
         text: tweet.text,
         created_at: tweet.created_at,
+        author_username: tweet.author_username,
         metrics: {
           retweet_count: tweet.public_metrics?.retweet_count || 0,
           reply_count: tweet.public_metrics?.reply_count || 0,
