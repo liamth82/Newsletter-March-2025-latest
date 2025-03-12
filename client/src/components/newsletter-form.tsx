@@ -57,47 +57,43 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
-        const method = newsletter ? "PATCH" : "POST";
+        const payload = {
+          templateId: Number(data.templateId),
+          keywords: data.keywords,
+          scheduleTime: data.scheduleTime,
+          tweetFilters: data.tweetFilters,
+          narrativeSettings: data.narrativeSettings
+        };
 
-        // Log the request details
-        console.log(`Making ${method} request to ${url} with data:`, JSON.stringify(data, null, 2));
+        console.log('Request payload:', JSON.stringify(payload, null, 2));
 
-        // Make the request with minimal transformation
-        const res = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            templateId: Number(data.templateId),
-            keywords: data.keywords,
-            scheduleTime: data.scheduleTime,
-            tweetFilters: data.tweetFilters,
-            narrativeSettings: data.narrativeSettings
-          })
-        });
-
-        // Log the response details
-        const responseText = await res.text();
-        console.log('Response status:', res.status);
-        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
-        console.log('Response body:', responseText);
+        const res = await apiRequest(
+          newsletter ? "PATCH" : "POST",
+          newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
+          payload
+        );
 
         if (!res.ok) {
-          throw new Error(`Failed to save newsletter: ${responseText}`);
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const error = await res.json();
+            throw new Error(error.message);
+          } else {
+            // For non-JSON errors, try to get a meaningful message
+            const text = await res.text();
+            if (text.includes("<!DOCTYPE html>")) {
+              throw new Error("Server error - please try again");
+            } else {
+              throw new Error(text || `Server error: ${res.status}`);
+            }
+          }
         }
 
-        // Try to parse the response as JSON
-        try {
-          return JSON.parse(responseText);
-        } catch (e) {
-          console.error('Failed to parse response as JSON:', e);
-          throw new Error('Invalid response from server');
-        }
-      } catch (error) {
+        const data = await res.json();
+        return data;
+      } catch (error: any) {
         console.error('Newsletter operation error:', error);
-        throw error;
+        throw new Error(error.message || 'Failed to process request');
       }
     },
     onSuccess: (data) => {
