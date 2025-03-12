@@ -22,6 +22,9 @@ export default function Preview() {
     enabled: !!newsletter?.templateId,
   });
 
+  console.log('Newsletter data:', newsletter);
+  console.log('Template data:', template);
+
   const fetchTweetsMutation = useMutation({
     mutationFn: async () => {
       console.log('Fetching tweets with keywords:', newsletter?.keywords);
@@ -104,13 +107,14 @@ export default function Preview() {
     );
   }
 
-  // Process the template content
-  let processedContent = template.content;
-  console.log('Processing template content:', {
-    templateId: template.id,
-    contentLength: processedContent.length,
+  console.log('Template Content:', {
+    id: template.id,
+    content: template.content,
     newsletterId: newsletter.id
   });
+
+  // Process the template content
+  let processedContent = template.content;
 
   // Replace newsletter title
   processedContent = processedContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');

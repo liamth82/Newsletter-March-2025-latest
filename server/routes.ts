@@ -30,6 +30,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(templates);
   });
 
+  app.get("/api/templates/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log('Fetching template:', req.params.id);
+    try {
+      const template = await storage.getTemplate(parseInt(req.params.id));
+      if (!template) {
+        console.log('Template not found:', req.params.id);
+        return res.status(404).json({ message: "Template not found" });
+      }
+      console.log('Template found:', template);
+      res.json(template);
+    } catch (error) {
+      console.error('Error fetching template:', error);
+      res.status(500).json({ message: "Failed to fetch template" });
+    }
+  });
+
   // Newsletters
   app.post("/api/newsletters", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
