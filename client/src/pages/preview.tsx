@@ -47,7 +47,6 @@ function generateNarrativeSummary(tweets: any[]) {
     }
   });
 
-  console.log('Generated narrative length:', narrative.length);
   return narrative;
 }
 
