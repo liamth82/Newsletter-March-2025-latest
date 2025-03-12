@@ -1,8 +1,11 @@
-import { User, InsertUser, Template, Newsletter, AnalyticsEvent, AnalyticsAggregate, Sector, InsertSector } from "@shared/schema";
+import { User, InsertUser, Template, Newsletter, AnalyticsEvent, AnalyticsAggregate, Sector, InsertSector, users, templates, newsletters, analyticsEvents, analyticsAggregates, sectors } from "@shared/schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User operations
@@ -35,187 +38,136 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private templates: Map<number, Template>;
-  private newsletters: Map<number, Newsletter>;
-  private analyticsEvents: Map<number, AnalyticsEvent>;
-  private analyticsAggregates: Map<number, AnalyticsAggregate>;
-  private sectors: Map<number, Sector>;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
-  private currentId: { [key: string]: number };
 
   constructor() {
-    this.users = new Map();
-    this.templates = new Map();
-    this.newsletters = new Map();
-    this.analyticsEvents = new Map();
-    this.analyticsAggregates = new Map();
-    this.sectors = new Map();
-    this.currentId = { 
-      users: 1, 
-      templates: 1, 
-      newsletters: 1,
-      analyticsEvents: 1,
-      analyticsAggregates: 1,
-      sectors: 1
-    };
-    this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true
+    });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId.users++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
   async createTemplate(template: Omit<Template, "id" | "createdAt">): Promise<Template> {
-    const id = this.currentId.templates++;
-    const newTemplate: Template = {
+    const [newTemplate] = await db.insert(templates).values({
       ...template,
-      id,
       createdAt: new Date(),
-    };
-    this.templates.set(id, newTemplate);
+      updatedAt: new Date()
+    }).returning();
     return newTemplate;
   }
 
   async getTemplates(userId: number): Promise<Template[]> {
-    return Array.from(this.templates.values()).filter(
-      (template) => template.userId === userId,
-    );
+    return await db.select().from(templates).where(eq(templates.userId, userId));
   }
 
   async getTemplate(id: number): Promise<Template | undefined> {
-    return this.templates.get(id);
+    const [template] = await db.select().from(templates).where(eq(templates.id, id));
+    return template;
   }
 
   async createNewsletter(newsletter: Omit<Newsletter, "id" | "createdAt" | "tweetContent">): Promise<Newsletter> {
-    const id = this.currentId.newsletters++;
-    const newNewsletter: Newsletter = {
+    const [newNewsletter] = await db.insert(newsletters).values({
       ...newsletter,
-      id,
       createdAt: new Date(),
-      tweetContent: [],
-    };
-    this.newsletters.set(id, newNewsletter);
+      tweetContent: []
+    }).returning();
     return newNewsletter;
   }
 
   async getNewsletters(userId: number): Promise<Newsletter[]> {
-    return Array.from(this.newsletters.values()).filter(
-      (newsletter) => newsletter.userId === userId,
-    );
+    return await db.select().from(newsletters).where(eq(newsletters.userId, userId));
   }
 
   async getNewsletter(id: number): Promise<Newsletter | undefined> {
-    return this.newsletters.get(id);
+    const [newsletter] = await db.select().from(newsletters).where(eq(newsletters.id, id));
+    return newsletter;
   }
 
   async updateNewsletter(id: number, data: Partial<Newsletter>): Promise<Newsletter> {
-    const newsletter = this.newsletters.get(id);
-    if (!newsletter) throw new Error("Newsletter not found");
+    const [updated] = await db
+      .update(newsletters)
+      .set(data)
+      .where(eq(newsletters.id, id))
+      .returning();
 
-    const updatedNewsletter = { ...newsletter, ...data };
-    this.newsletters.set(id, updatedNewsletter);
-    return updatedNewsletter;
+    if (!updated) {
+      throw new Error("Newsletter not found");
+    }
+
+    return updated;
   }
 
   async createAnalyticsEvent(event: Omit<AnalyticsEvent, "id" | "timestamp">): Promise<AnalyticsEvent> {
-    const id = this.currentId.analyticsEvents++;
-    const newEvent: AnalyticsEvent = {
+    const [newEvent] = await db.insert(analyticsEvents).values({
       ...event,
-      id,
-      timestamp: new Date(),
-    };
-    this.analyticsEvents.set(id, newEvent);
-
-    // Update aggregates
-    const newsletter = this.newsletters.get(event.newsletterId);
-    if (newsletter) {
-      const existingAggregate = Array.from(this.analyticsAggregates.values())
-        .find(agg => agg.newsletterId === event.newsletterId);
-
-      if (existingAggregate) {
-        const updatedAggregate: AnalyticsAggregate = {
-          ...existingAggregate,
-          totalViews: (existingAggregate.totalViews ?? 0) + (event.eventType === 'view' ? 1 : 0),
-          totalClicks: (existingAggregate.totalClicks ?? 0) + (event.eventType === 'click' ? 1 : 0),
-          lastUpdated: new Date(),
-        };
-        this.analyticsAggregates.set(existingAggregate.id, updatedAggregate);
-      } else {
-        const newAggregate: AnalyticsAggregate = {
-          id: this.currentId.analyticsAggregates++,
-          newsletterId: event.newsletterId,
-          totalViews: event.eventType === 'view' ? 1 : 0,
-          uniqueViews: event.eventType === 'view' ? 1 : 0,
-          totalClicks: event.eventType === 'click' ? 1 : 0,
-          uniqueClicks: event.eventType === 'click' ? 1 : 0,
-          bounceRate: 0,
-          avgReadTime: 0,
-          lastUpdated: new Date(),
-        };
-        this.analyticsAggregates.set(newAggregate.id, newAggregate);
-      }
-    }
-
+      timestamp: new Date()
+    }).returning();
     return newEvent;
   }
 
   async getAnalyticsAggregates(userId: number): Promise<AnalyticsAggregate[]> {
-    const userNewsletterIds = Array.from(this.newsletters.values())
-      .filter(n => n.userId === userId)
-      .map(n => n.id);
+    // First get all newsletter IDs for this user
+    const userNewsletters = await db.select().from(newsletters).where(eq(newsletters.userId, userId));
+    const newsletterIds = userNewsletters.map(n => n.id);
 
-    return Array.from(this.analyticsAggregates.values())
-      .filter(agg => userNewsletterIds.includes(agg.newsletterId));
+    // Then get aggregates for those newsletters
+    return await db.select()
+      .from(analyticsAggregates)
+      .where(
+        sql`${analyticsAggregates.newsletterId} = ANY(${newsletterIds})`
+      );
   }
 
   async createSector(sector: Omit<Sector, "id" | "createdAt"> & { userId: number }): Promise<Sector> {
-    const id = this.currentId.sectors++;
-    const newSector: Sector = {
+    const [newSector] = await db.insert(sectors).values({
       ...sector,
-      id,
-      createdAt: new Date(),
-    };
-    this.sectors.set(id, newSector);
+      createdAt: new Date()
+    }).returning();
     return newSector;
   }
 
   async getSectors(userId: number): Promise<Sector[]> {
-    return Array.from(this.sectors.values()).filter(
-      (sector) => sector.userId === userId,
-    );
+    return await db.select().from(sectors).where(eq(sectors.userId, userId));
   }
 
   async getSector(id: number): Promise<Sector | undefined> {
-    return this.sectors.get(id);
+    const [sector] = await db.select().from(sectors).where(eq(sectors.id, id));
+    return sector;
   }
 
   async updateSector(id: number, data: Partial<Sector>): Promise<Sector> {
-    const sector = this.sectors.get(id);
-    if (!sector) throw new Error("Sector not found");
+    const [updated] = await db
+      .update(sectors)
+      .set(data)
+      .where(eq(sectors.id, id))
+      .returning();
 
-    const updatedSector = { ...sector, ...data };
-    this.sectors.set(id, updatedSector);
-    return updatedSector;
+    if (!updated) {
+      throw new Error("Sector not found");
+    }
+
+    return updated;
   }
 
   async deleteSector(id: number): Promise<void> {
-    this.sectors.delete(id);
+    await db.delete(sectors).where(eq(sectors.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
