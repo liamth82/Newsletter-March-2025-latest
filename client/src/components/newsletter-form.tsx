@@ -64,7 +64,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         const error = await res.json();
         throw new Error(error.message || 'Failed to save newsletter');
       }
-      return res.json();
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
