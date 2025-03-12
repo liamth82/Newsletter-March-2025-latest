@@ -56,22 +56,34 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log('Submitting newsletter data:', data);
       try {
-        const formattedData = {
-          ...data,
+        // Clean up the data before sending
+        const payload = {
+          templateId: data.templateId,
+          keywords: data.keywords,
+          scheduleTime: data.scheduleTime,
+          tweetFilters: {
+            verifiedOnly: Boolean(data.tweetFilters.verifiedOnly),
+            minFollowers: Number(data.tweetFilters.minFollowers),
+            excludeReplies: Boolean(data.tweetFilters.excludeReplies),
+            excludeRetweets: Boolean(data.tweetFilters.excludeRetweets),
+            safeMode: Boolean(data.tweetFilters.safeMode),
+            newsOutlets: Array.isArray(data.tweetFilters.newsOutlets) ? data.tweetFilters.newsOutlets : []
+          },
           narrativeSettings: {
-            style: data.narrativeSettings.style,
+            style: String(data.narrativeSettings.style),
             wordCount: Number(data.narrativeSettings.wordCount),
-            tone: data.narrativeSettings.tone,
+            tone: String(data.narrativeSettings.tone),
             paragraphCount: Number(data.narrativeSettings.paragraphCount)
           }
         };
 
+        console.log('Submitting newsletter data:', payload);
+
         const res = await apiRequest(
           newsletter ? "PATCH" : "POST",
           newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
-          formattedData
+          payload
         );
 
         if (!res.ok) {
@@ -80,14 +92,14 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             const error = await res.json();
             throw new Error(error.message || 'Failed to save newsletter');
           } else {
-            // Handle non-JSON error responses
             const text = await res.text();
-            console.error('Server returned:', text);
+            console.error('Server error response:', text);
             throw new Error(`Server error: ${res.status}`);
           }
         }
 
         const result = await res.json();
+        console.log('Server response:', result);
         return result;
       } catch (error) {
         console.error('Newsletter operation error:', error);
