@@ -83,16 +83,37 @@ export default function Preview() {
     );
   }
 
+  // Ensure template content exists and is a string
+  if (!template.content || typeof template.content !== 'string') {
+    console.error('Invalid template content:', template.content);
+    return (
+      <div className="flex min-h-screen">
+        <SidebarNav />
+        <main className="flex-1 p-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold mb-4">Invalid Template</h1>
+            <p className="text-muted-foreground mb-8">
+              The template content appears to be invalid. Please check the template configuration.
+            </p>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Process the template content
-  let finalContent = template.content;
-  console.log('Processing template content:', { 
+  let processedContent = template.content;
+  console.log('Processing template content:', {
     templateId: template.id,
-    content: finalContent,
-    newsletterId: newsletter.id 
+    contentLength: processedContent.length,
+    newsletterId: newsletter.id
   });
 
   // Replace newsletter title
-  finalContent = finalContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
+  processedContent = processedContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
 
   // Process tweets
   let tweetSection = '';
@@ -126,7 +147,7 @@ export default function Preview() {
   }
 
   // Replace tweets placeholder
-  finalContent = finalContent.replace(/{{tweets}}/g, tweetSection);
+  processedContent = processedContent.replace(/{{tweets}}/g, tweetSection);
 
   // Apply styles
   const styles = `
@@ -162,7 +183,8 @@ export default function Preview() {
     </style>
   `;
 
-  const styledContent = styles + finalContent;
+  const finalContent = styles + processedContent;
+  console.log('Final content generated, length:', finalContent.length);
 
   return (
     <div className="flex min-h-screen">
@@ -191,7 +213,7 @@ export default function Preview() {
             <CardContent className="p-6">
               <div 
                 className="preview-content prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: styledContent }}
+                dangerouslySetInnerHTML={{ __html: finalContent }}
               />
             </CardContent>
           </Card>
