@@ -1,7 +1,7 @@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { NewsOutletsManager } from "./news-outlets-manager";
 import { useState } from "react";
 
@@ -36,52 +36,67 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
 
   return (
     <Card>
-      <CardContent className="space-y-4 p-4">
-        <div>
-          <Label className="text-base font-semibold">News Outlets</Label>
+      <CardHeader>
+        <CardTitle>Content Filters</CardTitle>
+        <CardDescription>
+          Customize your news sources and filter settings
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-base font-semibold">Trusted News Sources</Label>
+          <div className="text-sm text-muted-foreground mb-2">
+            Add Twitter handles of trusted news outlets (e.g. Reuters, AP, BBCNews) to only receive content from these sources
+          </div>
           <NewsOutletsManager
             value={filters.newsOutlets}
             onChange={(value) => handleFilterChange('newsOutlets', value)}
           />
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="verified-only">Verified accounts only</Label>
-            <Switch
-              id="verified-only"
-              checked={filters.verifiedOnly}
-              onCheckedChange={(checked) => handleFilterChange('verifiedOnly', checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="exclude-replies">Exclude replies</Label>
-            <Switch
-              id="exclude-replies"
-              checked={filters.excludeReplies}
-              onCheckedChange={(checked) => handleFilterChange('excludeReplies', checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="exclude-retweets">Exclude retweets</Label>
-            <Switch
-              id="exclude-retweets"
-              checked={filters.excludeRetweets}
-              onCheckedChange={(checked) => handleFilterChange('excludeRetweets', checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="safe-mode">Safe mode (filter offensive content)</Label>
-            <Switch
-              id="safe-mode"
-              checked={filters.safeMode}
-              onCheckedChange={(checked) => handleFilterChange('safeMode', checked)}
-            />
+        <div className="space-y-4">
+          <Label className="text-base font-semibold">Additional Filters</Label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="verified-only">Verified accounts only</Label>
+              <Switch
+                id="verified-only"
+                checked={filters.verifiedOnly}
+                onCheckedChange={(checked) => handleFilterChange('verifiedOnly', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="exclude-replies">Exclude replies</Label>
+              <Switch
+                id="exclude-replies"
+                checked={filters.excludeReplies}
+                onCheckedChange={(checked) => handleFilterChange('excludeReplies', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="exclude-retweets">Exclude retweets</Label>
+              <Switch
+                id="exclude-retweets"
+                checked={filters.excludeRetweets}
+                onCheckedChange={(checked) => handleFilterChange('excludeRetweets', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="safe-mode">Safe mode (filter offensive content)</Label>
+              <Switch
+                id="safe-mode"
+                checked={filters.safeMode}
+                onCheckedChange={(checked) => handleFilterChange('safeMode', checked)}
+              />
+            </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Minimum followers: {filters.minFollowers.toLocaleString()}</Label>
+          <Label className="text-base font-semibold">Minimum Followers</Label>
+          <div className="text-sm text-muted-foreground mb-2">
+            Filter out accounts with fewer followers to focus on established sources
+          </div>
           <Slider
             value={[filters.minFollowers]}
             onValueChange={(value) => handleFilterChange('minFollowers', value[0])}
