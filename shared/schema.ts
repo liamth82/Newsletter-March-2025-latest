@@ -60,6 +60,15 @@ export const analyticsAggregates = pgTable("analytics_aggregates", {
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
+export const sectors = pgTable("sectors", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  handles: text("handles").array().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -91,9 +100,17 @@ export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).pi
   ipAddress: true,
 });
 
+export const insertSectorSchema = createInsertSchema(sectors).pick({
+  name: true,
+  description: true,
+  handles: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type Newsletter = typeof newsletters.$inferSelect;
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type AnalyticsAggregate = typeof analyticsAggregates.$inferSelect;
+export type Sector = typeof sectors.$inferSelect;
+export type InsertSector = z.infer<typeof insertSectorSchema>;

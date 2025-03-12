@@ -1,4 +1,4 @@
-import { User, InsertUser, Template, Newsletter, AnalyticsEvent, AnalyticsAggregate } from "@shared/schema";
+import { User, InsertUser, Template, Newsletter, AnalyticsEvent, AnalyticsAggregate, Sector, InsertSector } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -25,6 +25,13 @@ export interface IStorage {
   createAnalyticsEvent(event: Omit<AnalyticsEvent, "id" | "timestamp">): Promise<AnalyticsEvent>;
   getAnalyticsAggregates(userId: number): Promise<AnalyticsAggregate[]>;
 
+  // Sector operations
+  createSector(sector: Omit<Sector, "id" | "createdAt"> & { userId: number }): Promise<Sector>;
+  getSectors(userId: number): Promise<Sector[]>;
+  getSector(id: number): Promise<Sector | undefined>;
+  updateSector(id: number, data: Partial<Sector>): Promise<Sector>;
+  deleteSector(id: number): Promise<void>;
+
   sessionStore: session.Store;
 }
 
@@ -34,6 +41,7 @@ export class MemStorage implements IStorage {
   private newsletters: Map<number, Newsletter>;
   private analyticsEvents: Map<number, AnalyticsEvent>;
   private analyticsAggregates: Map<number, AnalyticsAggregate>;
+  private sectors: Map<number, Sector>;
   sessionStore: session.Store;
   private currentId: { [key: string]: number };
 
@@ -43,12 +51,14 @@ export class MemStorage implements IStorage {
     this.newsletters = new Map();
     this.analyticsEvents = new Map();
     this.analyticsAggregates = new Map();
+    this.sectors = new Map();
     this.currentId = { 
       users: 1, 
       templates: 1, 
       newsletters: 1,
       analyticsEvents: 1,
-      analyticsAggregates: 1 
+      analyticsAggregates: 1,
+      sectors: 1
     };
     this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
   }
@@ -118,9 +128,6 @@ export class MemStorage implements IStorage {
     if (!newsletter) throw new Error("Newsletter not found");
 
     const updatedNewsletter = { ...newsletter, ...data };
-    console.log('Updating newsletter with data:', data);
-    console.log('Updated newsletter object:', updatedNewsletter);
-
     this.newsletters.set(id, updatedNewsletter);
     return updatedNewsletter;
   }
@@ -174,6 +181,40 @@ export class MemStorage implements IStorage {
 
     return Array.from(this.analyticsAggregates.values())
       .filter(agg => userNewsletterIds.includes(agg.newsletterId));
+  }
+
+  async createSector(sector: Omit<Sector, "id" | "createdAt"> & { userId: number }): Promise<Sector> {
+    const id = this.currentId.sectors++;
+    const newSector: Sector = {
+      ...sector,
+      id,
+      createdAt: new Date(),
+    };
+    this.sectors.set(id, newSector);
+    return newSector;
+  }
+
+  async getSectors(userId: number): Promise<Sector[]> {
+    return Array.from(this.sectors.values()).filter(
+      (sector) => sector.userId === userId,
+    );
+  }
+
+  async getSector(id: number): Promise<Sector | undefined> {
+    return this.sectors.get(id);
+  }
+
+  async updateSector(id: number, data: Partial<Sector>): Promise<Sector> {
+    const sector = this.sectors.get(id);
+    if (!sector) throw new Error("Sector not found");
+
+    const updatedSector = { ...sector, ...data };
+    this.sectors.set(id, updatedSector);
+    return updatedSector;
+  }
+
+  async deleteSector(id: number): Promise<void> {
+    this.sectors.delete(id);
   }
 }
 

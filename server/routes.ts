@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertTemplateSchema, insertNewsletterSchema } from "@shared/schema";
+import { insertTemplateSchema, insertNewsletterSchema, insertSectorSchema } from "@shared/schema";
 import { searchTweets } from "./services/twitter";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -186,6 +186,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     res.status(201).json(event);
   });
+
+  // Sectors
+  app.post("/api/sectors", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const parsed = insertSectorSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(parsed.error);
+    }
+
+    const sector = await storage.createSector({
+      ...parsed.data,
+      userId: req.user.id,
+    });
+    res.status(201).json(sector);
+  });
+
+  app.get("/api/sectors", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const sectors = await storage.getSectors(req.user.id);
+    res.json(sectors);
+  });
+
+  app.get("/api/sectors/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const sector = await storage.getSector(parseInt(req.params.id));
+    if (!sector) {
+      return res.status(404).json({ message: "Sector not found" });
+    }
+    if (sector.userId !== req.user.id) {
+      return res.sendStatus(403);
+    }
+    res.json(sector);
+  });
+
+  app.patch("/api/sectors/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const sector = await storage.getSector(parseInt(req.params.id));
+    if (!sector) {
+      return res.status(404).json({ message: "Sector not found" });
+    }
+    if (sector.userId !== req.user.id) {
+      return res.sendStatus(403);
+    }
+
+    const updated = await storage.updateSector(parseInt(req.params.id), req.body);
+    res.json(updated);
+  });
+
+  app.delete("/api/sectors/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const sector = await storage.getSector(parseInt(req.params.id));
+    if (!sector) {
+      return res.status(404).json({ message: "Sector not found" });
+    }
+    if (sector.userId !== req.user.id) {
+      return res.sendStatus(403);
+    }
+
+    await storage.deleteSector(parseInt(req.params.id));
+    res.sendStatus(204);
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

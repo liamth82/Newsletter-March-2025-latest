@@ -7,6 +7,7 @@ import {
   FileText,
   LogOut,
   BarChart,
+  Layers,
 } from "lucide-react";
 
 export function SidebarNav() {
@@ -16,6 +17,7 @@ export function SidebarNav() {
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Templates", href: "/templates", icon: FileText },
+    { name: "Sectors", href: "/sectors", icon: Layers },
     { name: "Analytics", href: "/analytics", icon: BarChart },
   ];
 
