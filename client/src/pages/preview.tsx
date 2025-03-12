@@ -87,11 +87,31 @@ export default function Preview() {
   console.log('Current template state:', template);
 
   // Generate the preview content
+  if (!template?.content) {
+    console.error('Template content is missing');
+    return (
+      <div className="flex min-h-screen">
+        <SidebarNav />
+        <main className="flex-1 p-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-2xl font-bold mb-4">Template Error</h1>
+            <p className="text-muted-foreground mb-8">
+              The selected template appears to be invalid or empty.
+            </p>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   let finalContent = template.content;
   console.log('Starting template content:', finalContent);
 
   // Replace newsletter title
-  const title = "Newsletter Preview";
+  const title = newsletter.title || "Newsletter Preview";
   finalContent = finalContent.replace(/{{newsletter_title}}/g, title);
   console.log('After title replacement:', finalContent);
 
