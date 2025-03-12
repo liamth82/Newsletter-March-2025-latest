@@ -118,7 +118,12 @@ export default function Preview() {
         excludeReplies: newsletter?.tweetFilters?.excludeReplies || false,
         excludeRetweets: newsletter?.tweetFilters?.excludeRetweets || false,
         safeMode: newsletter?.tweetFilters?.safeMode || true,
-        newsOutlets: newsletter?.tweetFilters?.newsOutlets || []
+        // Convert full URLs to just handles
+        newsOutlets: (newsletter?.tweetFilters?.newsOutlets || []).map(outlet => {
+          // Extract handle from URL or use as is if it's already a handle
+          const match = outlet.match(/(?:x\.com\/|twitter\.com\/)([^\/]+)/);
+          return match ? match[1] : outlet.replace(/^@/, '');
+        })
       };
 
       console.log('Fetching tweets with:', requestData);
@@ -260,7 +265,7 @@ export default function Preview() {
       <SidebarNav />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             </div>
