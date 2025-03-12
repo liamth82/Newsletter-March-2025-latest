@@ -64,15 +64,15 @@ export default function Preview() {
   }
 
   if (!newsletter || !template) {
-    console.log('Newsletter or template not found');
+    console.log('Newsletter or template missing:', { newsletter, template });
     return (
       <div className="flex min-h-screen">
         <SidebarNav />
         <main className="flex-1 p-8">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold mb-4">Newsletter Not Found</h1>
+            <h1 className="text-2xl font-bold mb-4">Content Not Found</h1>
             <p className="text-muted-foreground mb-8">
-              The newsletter you're looking for could not be found. It may have been deleted or the ID might be incorrect.
+              The newsletter or template could not be found. Please try again.
             </p>
             <Button variant="outline" onClick={() => window.history.back()}>
               Go Back
@@ -83,44 +83,23 @@ export default function Preview() {
     );
   }
 
-  console.log('Current newsletter state:', newsletter);
-  console.log('Current template state:', template);
-
-  // Generate the preview content
-  if (!template?.content) {
-    console.error('Template content is missing');
-    return (
-      <div className="flex min-h-screen">
-        <SidebarNav />
-        <main className="flex-1 p-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl font-bold mb-4">Template Error</h1>
-            <p className="text-muted-foreground mb-8">
-              The selected template appears to be invalid or empty.
-            </p>
-            <Button variant="outline" onClick={() => window.history.back()}>
-              Go Back
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
+  // Process the template content
   let finalContent = template.content;
-  console.log('Starting template content:', finalContent);
+  console.log('Processing template content:', { 
+    templateId: template.id,
+    content: finalContent,
+    newsletterId: newsletter.id 
+  });
 
   // Replace newsletter title
-  const title = newsletter.title || "Newsletter Preview";
-  finalContent = finalContent.replace(/{{newsletter_title}}/g, title);
-  console.log('After title replacement:', finalContent);
+  finalContent = finalContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
 
   // Process tweets
   let tweetSection = '';
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
     console.log('Processing tweets:', newsletter.tweetContent.length, 'tweets found');
     tweetSection = newsletter.tweetContent
-      .map(tweet => `
+      .map((tweet: any) => `
         <div class="tweet">
           <div class="tweet-content">
             <p>${tweet.text}</p>
@@ -136,7 +115,7 @@ export default function Preview() {
           </div>
         </div>
       `)
-      .join('');
+      .join('\n');
   } else {
     console.log('No tweets found in newsletter');
     tweetSection = `
@@ -148,11 +127,13 @@ export default function Preview() {
 
   // Replace tweets placeholder
   finalContent = finalContent.replace(/{{tweets}}/g, tweetSection);
-  console.log('After tweet replacement:', finalContent);
 
-  // Add styling
+  // Apply styles
   const styles = `
     <style>
+      .preview-content {
+        font-family: system-ui, -apple-system, sans-serif;
+      }
       .tweet {
         border: 1px solid #e2e8f0;
         padding: 1rem;
@@ -181,8 +162,7 @@ export default function Preview() {
     </style>
   `;
 
-  finalContent = styles + finalContent;
-  console.log('Final content length:', finalContent.length);
+  const styledContent = styles + finalContent;
 
   return (
     <div className="flex min-h-screen">
@@ -211,7 +191,7 @@ export default function Preview() {
             <CardContent className="p-6">
               <div 
                 className="preview-content prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: finalContent }}
+                dangerouslySetInnerHTML={{ __html: styledContent }}
               />
             </CardContent>
           </Card>
