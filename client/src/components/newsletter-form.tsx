@@ -6,11 +6,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KeywordManager } from "./keyword-manager";
+import { TweetFilters } from "./tweet-filters";
+import { NarrativeSettings } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { Template } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
@@ -30,6 +33,20 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
       sentAt: null,
       totalRecipients: null,
       deliveryStatus: null,
+      tweetFilters: {
+        verifiedOnly: false,
+        minFollowers: 0,
+        excludeReplies: false,
+        excludeRetweets: false,
+        safeMode: true,
+        newsOutlets: []
+      },
+      narrativeSettings: {
+        style: 'professional',
+        wordCount: 300,
+        tone: 'formal',
+        paragraphCount: 6
+      }
     },
   });
 
@@ -68,50 +85,95 @@ export function NewsletterForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <Form {...form}>
       <form onSubmit={onSubmit} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="templateId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Template</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {templates?.map((template) => (
-                    <SelectItem key={template.id} value={template.id.toString()}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <Tabs defaultValue="basic" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="basic">Basic Settings</TabsTrigger>
+            <TabsTrigger value="filters">Tweet Filters</TabsTrigger>
+            <TabsTrigger value="narrative">Narrative Style</TabsTrigger>
+          </TabsList>
 
-        <FormField
-          control={form.control}
-          name="keywords"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Keywords</FormLabel>
-              <FormControl>
-                <KeywordManager
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <TabsContent value="basic" className="space-y-6">
+            <FormField
+              control={form.control}
+              name="templateId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Template</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    value={field.value?.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {templates?.map((template) => (
+                        <SelectItem key={template.id} value={template.id.toString()}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="keywords"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Keywords</FormLabel>
+                  <FormControl>
+                    <KeywordManager
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="filters" className="space-y-6">
+            <FormField
+              control={form.control}
+              name="tweetFilters"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <TweetFilters
+                      onFiltersChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="narrative" className="space-y-6">
+            <FormField
+              control={form.control}
+              name="narrativeSettings"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <NarrativeSettings
+                      settings={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+        </Tabs>
 
         <div className="flex justify-end gap-2">
           <Button

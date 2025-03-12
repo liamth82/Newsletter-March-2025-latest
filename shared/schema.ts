@@ -36,6 +36,21 @@ export const newsletters = pgTable("newsletters", {
   sentAt: timestamp("sent_at"),
   totalRecipients: integer("total_recipients").default(0),
   deliveryStatus: text("delivery_status").default('pending'),
+  // Add new fields for filters and settings
+  tweetFilters: json("tweet_filters").default({
+    verifiedOnly: false,
+    minFollowers: 0,
+    excludeReplies: false,
+    excludeRetweets: false,
+    safeMode: true,
+    newsOutlets: []
+  }),
+  narrativeSettings: json("narrative_settings").default({
+    style: 'professional',
+    wordCount: 300,
+    tone: 'formal',
+    paragraphCount: 6
+  })
 });
 
 export const analyticsEvents = pgTable("analytics_events", {
@@ -90,6 +105,8 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   templateId: true,
   keywords: true,
   scheduleTime: true,
+  tweetFilters: true,
+  narrativeSettings: true,
 });
 
 export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).pick({

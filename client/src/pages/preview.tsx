@@ -103,12 +103,6 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [narrativeSettings, setNarrativeSettings] = useState<NarrativeSettingsType>({
-    style: 'professional',
-    wordCount: 300,
-    tone: 'formal',
-    paragraphCount: 6
-  });
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
@@ -120,10 +114,10 @@ export default function Preview() {
   });
 
   const fetchTweetsMutation = useMutation({
-    mutationFn: async (filters: any) => {
+    mutationFn: async () => {
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
-        keywords: newsletter?.keywords || ["technology"],
-        ...filters
+        keywords: newsletter?.keywords || [],
+        ...newsletter?.tweetFilters
       });
       if (!res.ok) {
         throw new Error('Failed to fetch tweets');
@@ -131,7 +125,7 @@ export default function Preview() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.setQueryData([`/api/newsletters/${id}`], data);
+      queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
       toast({
         title: "Success",
         description: "Newsletter content updated with latest tweets.",
@@ -157,8 +151,8 @@ export default function Preview() {
     );
   }
 
-  // Base template
-  const baseTemplate = `
+  // Process the content
+  const templateContent = template?.content || `
     <div class="newsletter-content max-w-4xl mx-auto">
       <h1 class="text-3xl font-bold mb-8">{{newsletter_title}}</h1>
       {{tweets}}
@@ -191,13 +185,16 @@ export default function Preview() {
     </style>
   `;
 
-  // Process the content
-  const templateContent = template?.content || baseTemplate;
   let finalContent = templateContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
-
-
-  finalContent = finalContent.replace(/{{tweets}}/g, generateNarrativeSummary(newsletter?.tweetContent || [], narrativeSettings));
-
+  finalContent = finalContent.replace(
+    /{{tweets}}/g, 
+    generateNarrativeSummary(newsletter?.tweetContent || [], newsletter?.narrativeSettings || {
+      style: 'professional',
+      wordCount: 300,
+      tone: 'formal',
+      paragraphCount: 6
+    })
+  );
 
   return (
     <div className="flex min-h-screen">
@@ -209,25 +206,18 @@ export default function Preview() {
               <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             </div>
             <div className="space-y-4">
-              <TweetFilters
-                onFiltersChange={(filters) => fetchTweetsMutation.mutate(filters)}
-              />
-              <NarrativeSettings
-                settings={narrativeSettings}
-                onChange={setNarrativeSettings}
-              />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => window.history.back()}>
                   Back
                 </Button>
                 <Button
-                  onClick={() => fetchTweetsMutation.mutate({})}
+                  onClick={() => fetchTweetsMutation.mutate()}
                   disabled={fetchTweetsMutation.isPending}
                 >
                   {fetchTweetsMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Fetch Tweets
+                  Refresh Content
                 </Button>
               </div>
             </div>
