@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
-import { NarrativeSettings } from "./narrative-settings";
+import { NarrativeSettings, type NarrativeSettings as NarrativeSettingsType } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
@@ -21,10 +21,10 @@ interface NewsletterFormProps {
   newsletter?: Newsletter | null;
 }
 
-const defaultNarrativeSettings = {
-  style: 'professional' as const,
+const defaultNarrativeSettings: NarrativeSettingsType = {
+  style: 'professional',
   wordCount: 300,
-  tone: 'formal' as const,
+  tone: 'formal',
   paragraphCount: 6
 };
 
@@ -57,25 +57,25 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (formData: any) => {
       try {
-        // Ensure narrative settings match the schema exactly
-        const narrativeSettings = {
-          style: formData.narrativeSettings.style,
-          wordCount: Number(formData.narrativeSettings.wordCount),
-          tone: formData.narrativeSettings.tone,
-          paragraphCount: Number(formData.narrativeSettings.paragraphCount)
-        };
-
-        // Only include the fields defined in the schema
-        const payload = {
+        const validatedData = {
           templateId: Number(formData.templateId),
           keywords: formData.keywords,
           scheduleTime: formData.scheduleTime,
-          tweetFilters: formData.tweetFilters,
-          narrativeSettings
+          tweetFilters: {
+            verifiedOnly: Boolean(formData.tweetFilters.verifiedOnly),
+            minFollowers: Number(formData.tweetFilters.minFollowers),
+            excludeReplies: Boolean(formData.tweetFilters.excludeReplies),
+            excludeRetweets: Boolean(formData.tweetFilters.excludeRetweets),
+            safeMode: Boolean(formData.tweetFilters.safeMode),
+            newsOutlets: formData.tweetFilters.newsOutlets || []
+          },
+          narrativeSettings: {
+            style: formData.narrativeSettings.style,
+            wordCount: Number(formData.narrativeSettings.wordCount),
+            tone: formData.narrativeSettings.tone,
+            paragraphCount: Number(formData.narrativeSettings.paragraphCount)
+          }
         };
-
-        // Validate the payload against the schema
-        const validatedData = insertNewsletterSchema.parse(payload);
 
         const method = newsletter ? "PATCH" : "POST";
         const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
@@ -85,8 +85,19 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         const res = await apiRequest(method, url, validatedData);
 
         if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || 'Failed to save newsletter');
+          const contentType = res.headers.get("content-type");
+          let errorMessage;
+
+          if (contentType?.includes("application/json")) {
+            const error = await res.json();
+            errorMessage = error.message;
+          } else {
+            const text = await res.text();
+            errorMessage = "Failed to update newsletter";
+            console.error('Server error response:', text);
+          }
+
+          throw new Error(errorMessage);
         }
 
         return await res.json();

@@ -3,15 +3,18 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
+export type NarrativeStyle = 'professional' | 'casual' | 'storytelling';
+export type NarrativeTone = 'formal' | 'conversational';
+
 export interface NarrativeSettings {
-  style: 'professional' | 'casual' | 'storytelling';
+  style: NarrativeStyle;
   wordCount: number;
-  tone: 'formal' | 'conversational';
+  tone: NarrativeTone;
   paragraphCount: number;
 }
 
 interface NarrativeSettingsProps {
-  settings: NarrativeSettings;
+  settings?: NarrativeSettings;
   onChange: (settings: NarrativeSettings) => void;
 }
 
@@ -24,25 +27,31 @@ const defaultSettings: NarrativeSettings = {
 
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
   const handleChange = (key: keyof NarrativeSettings, value: any) => {
-    const currentSettings = { ...settings };
+    const currentSettings = { ...defaultSettings, ...settings };
 
     switch (key) {
       case 'style':
-        currentSettings.style = value as NarrativeSettings['style'];
+        if (value === 'professional' || value === 'casual' || value === 'storytelling') {
+          currentSettings.style = value;
+        }
         break;
       case 'wordCount':
-        currentSettings.wordCount = Number(value);
+        currentSettings.wordCount = Math.max(100, Math.min(1000, Number(value)));
         break;
       case 'tone':
-        currentSettings.tone = value as NarrativeSettings['tone'];
+        if (value === 'formal' || value === 'conversational') {
+          currentSettings.tone = value;
+        }
         break;
       case 'paragraphCount':
-        currentSettings.paragraphCount = Number(value);
+        currentSettings.paragraphCount = Math.max(1, Math.min(10, Number(value)));
         break;
     }
 
     onChange(currentSettings);
   };
+
+  const safeSettings = { ...defaultSettings, ...settings };
 
   return (
     <Card>
@@ -50,10 +59,8 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         <div className="space-y-2">
           <Label>Writing Style</Label>
           <Select
-            value={settings.style}
-            onValueChange={(value: 'professional' | 'casual' | 'storytelling') => 
-              handleChange('style', value)
-            }
+            value={safeSettings.style}
+            onValueChange={(value: NarrativeStyle) => handleChange('style', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -69,10 +76,8 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         <div className="space-y-2">
           <Label>Tone</Label>
           <Select
-            value={settings.tone}
-            onValueChange={(value: 'formal' | 'conversational') => 
-              handleChange('tone', value)
-            }
+            value={safeSettings.tone}
+            onValueChange={(value: NarrativeTone) => handleChange('tone', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
@@ -85,32 +90,32 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         </div>
 
         <div className="space-y-2">
-          <Label>Target Word Count: {settings.wordCount}</Label>
+          <Label>Target Word Count: {safeSettings.wordCount}</Label>
           <Slider
-            value={[settings.wordCount]}
+            value={[safeSettings.wordCount]}
             onValueChange={(value) => handleChange('wordCount', value[0])}
             min={100}
-            max={500}
+            max={1000}
             step={50}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>100</span>
-            <span>500</span>
+            <span>1000</span>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Number of Paragraphs: {settings.paragraphCount}</Label>
+          <Label>Number of Paragraphs: {safeSettings.paragraphCount}</Label>
           <Slider
-            value={[settings.paragraphCount]}
+            value={[safeSettings.paragraphCount]}
             onValueChange={(value) => handleChange('paragraphCount', value[0])}
-            min={2}
-            max={8}
+            min={1}
+            max={10}
             step={1}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>2</span>
-            <span>8</span>
+            <span>1</span>
+            <span>10</span>
           </div>
         </div>
       </CardContent>
