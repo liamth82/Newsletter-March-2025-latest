@@ -9,7 +9,7 @@ import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
 import { NarrativeSettings, type NarrativeSettings as NarrativeSettingsType } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import {  queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { Newsletter, Template } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -57,47 +57,44 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (formData: any) => {
       try {
-        const validatedData = {
-          templateId: Number(formData.templateId),
-          keywords: formData.keywords,
-          scheduleTime: formData.scheduleTime,
-          tweetFilters: {
-            verifiedOnly: Boolean(formData.tweetFilters.verifiedOnly),
-            minFollowers: Number(formData.tweetFilters.minFollowers),
-            excludeReplies: Boolean(formData.tweetFilters.excludeReplies),
-            excludeRetweets: Boolean(formData.tweetFilters.excludeRetweets),
-            safeMode: Boolean(formData.tweetFilters.safeMode),
-            newsOutlets: formData.tweetFilters.newsOutlets || []
-          },
-          narrativeSettings: {
-            style: formData.narrativeSettings.style,
-            wordCount: Number(formData.narrativeSettings.wordCount),
-            tone: formData.narrativeSettings.tone,
-            paragraphCount: Number(formData.narrativeSettings.paragraphCount)
-          }
-        };
-
         const method = newsletter ? "PATCH" : "POST";
         const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
-        console.log(`${method} request to ${url}:`, JSON.stringify(validatedData, null, 2));
+        const validatedData = {
+          templateId: Number(formData.templateId),
+          keywords: formData.keywords || [],
+          scheduleTime: formData.scheduleTime,
+          tweetFilters: {
+            verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
+            minFollowers: Number(formData.tweetFilters?.minFollowers || 0),
+            excludeReplies: Boolean(formData.tweetFilters?.excludeReplies),
+            excludeRetweets: Boolean(formData.tweetFilters?.excludeRetweets),
+            safeMode: Boolean(formData.tweetFilters?.safeMode),
+            newsOutlets: Array.isArray(formData.tweetFilters?.newsOutlets) ? formData.tweetFilters.newsOutlets : []
+          },
+          narrativeSettings: {
+            ...defaultNarrativeSettings,
+            ...formData.narrativeSettings,
+            wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
+            paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
+          }
+        };
 
-        const res = await apiRequest(method, url, validatedData);
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(validatedData)
+        });
 
         if (!res.ok) {
-          const contentType = res.headers.get("content-type");
-          let errorMessage;
-
-          if (contentType?.includes("application/json")) {
-            const error = await res.json();
-            errorMessage = error.message;
-          } else {
-            const text = await res.text();
-            errorMessage = "Failed to update newsletter";
-            console.error('Server error response:', text);
+          const errorData = await res.json().catch(() => null);
+          if (errorData) {
+            throw new Error(errorData.message || 'Failed to save newsletter');
           }
-
-          throw new Error(errorMessage);
+          throw new Error(`Server error: ${res.status}`);
         }
 
         return await res.json();
