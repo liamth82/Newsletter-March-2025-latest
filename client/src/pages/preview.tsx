@@ -7,6 +7,7 @@ import { Newsletter, Template } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { TweetFilters } from "@/components/tweet-filters";
 
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
@@ -26,10 +27,14 @@ export default function Preview() {
   console.log('Template data:', template);
 
   const fetchTweetsMutation = useMutation({
-    mutationFn: async () => {
-      console.log('Fetching tweets with keywords:', newsletter?.keywords);
+    mutationFn: async (filters: any) => {
+      console.log('Fetching tweets with keywords and filters:', { 
+        keywords: newsletter?.keywords,
+        filters 
+      });
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
-        keywords: newsletter?.keywords || ["technology"]
+        keywords: newsletter?.keywords || ["technology"],
+        ...filters
       });
       if (!res.ok) {
         throw new Error('Failed to fetch tweets');
@@ -39,7 +44,6 @@ export default function Preview() {
       return data;
     },
     onSuccess: (data) => {
-      console.log('Updating newsletter data with tweets:', data);
       queryClient.setQueryData([`/api/newsletters/${id}`], data);
       toast({
         title: "Tweets fetched successfully",
@@ -195,21 +199,28 @@ export default function Preview() {
       <SidebarNav />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Newsletter Preview</h1>
-            <div className="space-x-2">
-              <Button variant="outline" onClick={() => window.history.back()}>
-                Back
-              </Button>
-              <Button
-                onClick={() => fetchTweetsMutation.mutate()}
-                disabled={fetchTweetsMutation.isPending}
-              >
-                {fetchTweetsMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Fetch Tweets
-              </Button>
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Newsletter Preview</h1>
+            </div>
+            <div className="space-y-4">
+              <TweetFilters
+                onFiltersChange={(filters) => fetchTweetsMutation.mutate(filters)}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => window.history.back()}>
+                  Back
+                </Button>
+                <Button
+                  onClick={() => fetchTweetsMutation.mutate({})} //Added default empty object
+                  disabled={fetchTweetsMutation.isPending}
+                >
+                  {fetchTweetsMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Fetch Tweets
+                </Button>
+              </div>
             </div>
           </div>
 

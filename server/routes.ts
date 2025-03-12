@@ -90,37 +90,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      console.log('Fetching tweets for newsletter:', req.params.id, 'keywords:', req.body.keywords);
+      console.log('Fetching tweets for newsletter:', req.params.id, 'request body:', req.body);
+
       if (!req.body.keywords || !Array.isArray(req.body.keywords)) {
         return res.status(400).json({ message: "Keywords must be provided as an array" });
       }
 
-      const tweets = await searchTweets(req.body.keywords);
-      console.log('Successfully fetched tweets:', tweets);
+      const filters = {
+        verifiedOnly: req.body.verifiedOnly === true,
+        minFollowers: parseInt(req.body.minFollowers) || 0,
+        excludeReplies: req.body.excludeReplies === true,
+        excludeRetweets: req.body.excludeRetweets === true,
+        safeMode: req.body.safeMode === true
+      };
+
+      const tweets = await searchTweets(req.body.keywords, filters);
+      console.log('Successfully fetched filtered tweets:', tweets);
 
       // Process tweets ensuring all required fields are present
-      const processedTweets = tweets.map(tweet => {
-        console.log('Processing tweet:', tweet);
-        return {
-          id: tweet.id,
-          text: tweet.text,
-          created_at: tweet.created_at,
-          metrics: {
-            retweet_count: tweet.public_metrics?.retweet_count || 0,
-            reply_count: tweet.public_metrics?.reply_count || 0,
-            like_count: tweet.public_metrics?.like_count || 0,
-            quote_count: tweet.public_metrics?.quote_count || 0
-          }
-        };
-      });
-
-      console.log('Processed tweets:', processedTweets);
+      const processedTweets = tweets.map(tweet => ({
+        id: tweet.id,
+        text: tweet.text,
+        created_at: tweet.created_at,
+        metrics: {
+          retweet_count: tweet.public_metrics?.retweet_count || 0,
+          reply_count: tweet.public_metrics?.reply_count || 0,
+          like_count: tweet.public_metrics?.like_count || 0,
+          quote_count: tweet.public_metrics?.quote_count || 0
+        }
+      }));
 
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
         tweetContent: processedTweets
       });
 
-      console.log('Updated newsletter:', newsletter);
+      console.log('Updated newsletter with filtered tweets:', newsletter);
       res.json(newsletter);
     } catch (error) {
       console.error('Failed to fetch tweets:', error);

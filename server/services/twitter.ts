@@ -5,46 +5,93 @@ console.log('Initializing Twitter client with credentials:', {
   appSecret: process.env.TWITTER_API_SECRET ? 'present' : 'missing',
 });
 
-// Initialize the client with application-only auth
+interface TweetFilters {
+  verifiedOnly?: boolean;
+  minFollowers?: number;
+  excludeReplies?: boolean;
+  excludeRetweets?: boolean;
+  safeMode?: boolean;
+}
+
 const client = new TwitterApi({
   appKey: process.env.TWITTER_API_KEY!,
   appSecret: process.env.TWITTER_API_SECRET!,
 });
 
-export async function searchTweets(keywords: string[]) {
+export async function searchTweets(keywords: string[], filters: TweetFilters = {}) {
   try {
-    console.log('Searching tweets for keywords:', keywords);
-    // Ensure we have valid keywords
+    console.log('Searching tweets with keywords and filters:', { keywords, filters });
     if (!keywords || keywords.length === 0) {
       console.log('No keywords provided');
       return [];
     }
 
-    // Get bearer token for app-only auth
     const appClient = await client.appLogin();
     console.log('Successfully authenticated with Twitter');
 
+    // Build query string with filters
+    const queryParts = [...keywords];
+    if (filters.verifiedOnly) {
+      queryParts.push('is:verified');
+    }
+    if (filters.excludeReplies) {
+      queryParts.push('-is:reply');
+    }
+    if (filters.excludeRetweets) {
+      queryParts.push('-is:retweet');
+    }
+    if (filters.safeMode) {
+      queryParts.push('-has:links'); // Exclude tweets with links as they might be spam
+      queryParts.push('lang:en'); // Only English tweets for better content filtering
+    }
+
     const tweets = await Promise.all(
-      keywords.map(async (keyword) => {
+      queryParts.map(async (keyword) => {
         console.log(`Fetching tweets for keyword: ${keyword}`);
         try {
           const response = await appClient.v2.search(keyword, {
             max_results: 10,
-            expansions: ['author_id'],
-            'tweet.fields': ['created_at', 'public_metrics'],
+            expansions: ['author_id', 'referenced_tweets'],
+            'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
+            'user.fields': ['verified', 'public_metrics'],
           });
 
-          // Log the complete response structure for debugging
           console.log(`Raw response structure for ${keyword}:`, {
             data: response.data,
             includes: response.includes,
             meta: response.meta
           });
 
-          // Extract tweets from the response data
-          const tweetData = response.data.data || [];
-          console.log('Extracted tweets:', tweetData);
-          return tweetData;
+          // Filter tweets based on criteria
+          const tweets = response.data.data || [];
+          const users = response.data.includes?.users || [];
+
+          const filteredTweets = tweets.filter(tweet => {
+            const author = users.find(u => u.id === tweet.author_id);
+
+            // Skip if we can't find author info
+            if (!author) return false;
+
+            // Check minimum followers if specified
+            if (filters.minFollowers && author.public_metrics?.followers_count < filters.minFollowers) {
+              return false;
+            }
+
+            // Additional content filtering in safe mode
+            if (filters.safeMode) {
+              const lowercaseText = tweet.text.toLowerCase();
+              // Basic profanity check (expand this list as needed)
+              const profanityList = ['fuck', 'shit', 'damn', 'ass'];
+              if (profanityList.some(word => lowercaseText.includes(word))) {
+                return false;
+              }
+            }
+
+            return true;
+          });
+
+          console.log('Filtered tweets:', filteredTweets);
+          return filteredTweets;
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
