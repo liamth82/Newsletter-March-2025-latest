@@ -57,47 +57,59 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        // Clean up the data before sending
+        // Format the data according to the schema
         const payload = {
-          templateId: data.templateId,
-          keywords: data.keywords,
+          templateId: Number(data.templateId),
+          keywords: Array.isArray(data.keywords) ? data.keywords : [],
           scheduleTime: data.scheduleTime,
           tweetFilters: {
-            verifiedOnly: Boolean(data.tweetFilters.verifiedOnly),
-            minFollowers: Number(data.tweetFilters.minFollowers),
-            excludeReplies: Boolean(data.tweetFilters.excludeReplies),
-            excludeRetweets: Boolean(data.tweetFilters.excludeRetweets),
-            safeMode: Boolean(data.tweetFilters.safeMode),
-            newsOutlets: Array.isArray(data.tweetFilters.newsOutlets) ? data.tweetFilters.newsOutlets : []
+            verifiedOnly: Boolean(data.tweetFilters?.verifiedOnly),
+            minFollowers: Number(data.tweetFilters?.minFollowers || 0),
+            excludeReplies: Boolean(data.tweetFilters?.excludeReplies),
+            excludeRetweets: Boolean(data.tweetFilters?.excludeRetweets),
+            safeMode: Boolean(data.tweetFilters?.safeMode),
+            newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
           },
           narrativeSettings: {
-            style: String(data.narrativeSettings.style),
-            wordCount: Number(data.narrativeSettings.wordCount),
-            tone: String(data.narrativeSettings.tone),
-            paragraphCount: Number(data.narrativeSettings.paragraphCount)
+            style: String(data.narrativeSettings?.style || 'professional'),
+            wordCount: Number(data.narrativeSettings?.wordCount || 300),
+            tone: String(data.narrativeSettings?.tone || 'formal'),
+            paragraphCount: Number(data.narrativeSettings?.paragraphCount || 6)
           }
         };
 
-        console.log('Submitting newsletter data:', payload);
+        console.log('Submitting newsletter data:', JSON.stringify(payload, null, 2));
 
+        // Make the API request
         const res = await apiRequest(
           newsletter ? "PATCH" : "POST",
           newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
           payload
         );
 
+        // Handle the response
         if (!res.ok) {
           const contentType = res.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const error = await res.json();
-            throw new Error(error.message || 'Failed to save newsletter');
-          } else {
-            const text = await res.text();
-            console.error('Server error response:', text);
-            throw new Error(`Server error: ${res.status}`);
+          let errorMessage;
+
+          try {
+            if (contentType && contentType.includes("application/json")) {
+              const error = await res.json();
+              errorMessage = error.message;
+            } else {
+              const text = await res.text();
+              console.error('Non-JSON error response:', text);
+              errorMessage = `Server error (${res.status})`;
+            }
+          } catch (parseError) {
+            console.error('Error parsing response:', parseError);
+            errorMessage = 'Failed to parse server response';
           }
+
+          throw new Error(errorMessage || 'Failed to save newsletter');
         }
 
+        // Parse the successful response
         const result = await res.json();
         console.log('Server response:', result);
         return result;
@@ -123,9 +135,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     },
   });
 
-  const onSubmit = form.handleSubmit((data) => {
-    createMutation.mutate(data);
-  });
+  const onSubmit = form.handleSubmit((data) => createMutation.mutate(data));
 
   return (
     <Form {...form}>
@@ -145,8 +155,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                 <FormItem>
                   <FormLabel>Template</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
                     value={field.value?.toString()}
+                    onValueChange={(value) => field.onChange(parseInt(value))}
                   >
                     <FormControl>
                       <SelectTrigger>
