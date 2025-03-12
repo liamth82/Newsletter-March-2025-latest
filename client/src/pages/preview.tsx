@@ -14,7 +14,7 @@ function generateNarrativeSummary(tweets: any[]) {
     return '<p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p>';
   }
 
-  // Group tweets by source/topic
+  // Group tweets by source
   const sections = tweets.reduce((acc: any, tweet: any) => {
     const source = tweet.author_username || 'Unknown Source';
     if (!acc[source]) {
@@ -24,21 +24,33 @@ function generateNarrativeSummary(tweets: any[]) {
     return acc;
   }, {});
 
-  // Generate narrative paragraphs
+  // Generate narrative sections
   let narrative = '';
   Object.entries(sections).forEach(([source, sourceTweets]: [string, any]) => {
     const tweets = sourceTweets as any[];
     if (tweets.length > 0) {
+      // Combine similar tweets into coherent paragraphs
+      const topics = tweets.reduce((acc: string[], tweet: any) => {
+        // Clean the tweet text
+        const text = tweet.text
+          .replace(/RT @\w+: /, '') // Remove retweet prefix
+          .replace(/https:\/\/t\.co\/\w+/g, '') // Remove t.co links
+          .trim();
+
+        acc.push(text);
+        return acc;
+      }, []);
+
       narrative += `
         <div class="narrative-section mb-6">
-          <h3 class="text-lg font-semibold mb-2">Updates from @${source}</h3>
+          <h3 class="text-lg font-semibold mb-2">Latest from @${source}</h3>
           <div class="prose">
-            ${tweets.map(tweet => `
-              <p class="mb-4">${tweet.text}</p>
-            `).join('')}
-          </div>
-          <div class="text-sm text-muted-foreground">
-            Last updated: ${new Date(tweets[0].created_at).toLocaleString()}
+            <p class="mb-4 text-gray-700 leading-relaxed">
+              ${topics.join(' ')}
+            </p>
+            <div class="text-sm text-muted-foreground mt-2">
+              Last updated: ${new Date(tweets[0].created_at).toLocaleString()}
+            </div>
           </div>
         </div>
       `;
