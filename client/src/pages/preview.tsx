@@ -75,13 +75,13 @@ export default function Preview() {
     onSuccess: (data) => {
       queryClient.setQueryData([`/api/newsletters/${id}`], data);
       toast({
-        title: "Tweets fetched successfully",
-        description: "The newsletter content has been updated with new tweets.",
+        title: "Success",
+        description: "Newsletter content updated with latest tweets.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to fetch tweets",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -99,43 +99,13 @@ export default function Preview() {
     );
   }
 
-  // Base template
-  const baseTemplate = `
-    <div class="newsletter-content">
-      <h1 class="text-3xl font-bold mb-6">{{newsletter_title}}</h1>
-      <div class="content-section">
-        {{tweets}}
-      </div>
-    </div>
-  `;
-
-  // First, replace the title
-  const titleReplaced = (template?.content || baseTemplate).replace(
-    /{{newsletter_title}}/g,
-    'Newsletter Preview'
-  );
-
-  // Then, handle the tweet content
-  let finalContent = titleReplaced;
-  if (newsletter?.tweetContent && Array.isArray(newsletter.tweetContent)) {
-    console.log('Found tweet content:', newsletter.tweetContent);
-    const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
-    finalContent = finalContent.replace(/{{tweets}}/g, narrativeContent);
-  } else {
-    finalContent = finalContent.replace(
-      /{{tweets}}/g,
-      `<div class="no-tweets-message">
-        <p>No tweets available. Click "Fetch Tweets" to load content.</p>
-      </div>`
-    );
-  }
-
   // Add styling
   const styles = `
     <style>
       .newsletter-content {
         max-width: 100%;
         margin: 0 auto;
+        font-family: system-ui, -apple-system, sans-serif;
       }
       .narrative-section {
         border-bottom: 1px solid #e2e8f0;
@@ -162,6 +132,34 @@ export default function Preview() {
       }
     </style>
   `;
+
+  // Base template
+  const baseTemplate = `
+    <div class="newsletter-content">
+      <h1 class="text-3xl font-bold mb-6">{{newsletter_title}}</h1>
+      <div class="content-section">{{tweets}}</div>
+    </div>
+  `;
+
+  // Process the content
+  const templateContent = template?.content || baseTemplate;
+  let finalContent = templateContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
+
+  // Add tweet content
+  if (newsletter?.tweetContent && Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
+    console.log('Processing tweets:', newsletter.tweetContent);
+    const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
+    console.log('Generated narrative content:', narrativeContent);
+    finalContent = finalContent.replace(/{{tweets}}/g, narrativeContent);
+  } else {
+    console.log('No tweets available in newsletter');
+    finalContent = finalContent.replace(
+      /{{tweets}}/g,
+      `<div class="no-tweets-message">
+        <p>No tweets available. Click "Fetch Tweets" to load content.</p>
+      </div>`
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
