@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { NarrativeSettings as NarrativeSettingsType } from "@/components/narrative-settings";
+import DOMPurify from 'dompurify';
 
 function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType) {
   if (!tweets || tweets.length === 0) {
@@ -15,85 +16,84 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType
   }
 
   // Clean and sort tweets by date
-  const cleanedTweets = tweets.map(tweet => ({
-    author: tweet.author_username,
-    text: tweet.text
-      .replace(/RT @\w+: /, '')
-      .replace(/https:\/\/t\.co\/\w+/g, '')
-      .replace(/\n+/g, ' ')
-      .trim(),
-    date: new Date(tweet.created_at)
-  })).sort((a, b) => b.date.getTime() - a.date.getTime());
+  const cleanedTweets = tweets
+    .map(tweet => ({
+      author: tweet.author_username,
+      text: tweet.text
+        .replace(/RT @\w+: /, '')
+        .replace(/https:\/\/t\.co\/\w+/g, '')
+        .replace(/\n+/g, ' ')
+        .trim(),
+      date: new Date(tweet.created_at)
+    }))
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  // Get transition phrases based on style and tone
-  const getTransitions = () => {
-    if (settings.style === 'professional' && settings.tone === 'formal') {
-      return [
-        "Furthermore, %author% indicates that",
-        "According to %author%'s analysis,",
-        "As reported by %author%,",
-        "%author% emphasizes that"
-      ];
-    } else if (settings.style === 'storytelling') {
-      return [
-        "The story continues as %author% reveals",
-        "Adding to the narrative, %author% shares",
-        "In an interesting twist, %author% notes",
-        "The plot thickens when %author% explains"
-      ];
-    } else {
-      return [
-        "Meanwhile, %author% says",
-        "%author% chimes in with",
-        "%author% also mentions that",
-        "Adding to this, %author% points out"
-      ];
-    }
+  const transitions = {
+    professional: [
+      "Furthermore, %author% indicates that",
+      "According to %author%'s analysis,",
+      "As reported by %author%,",
+      "%author% emphasizes that"
+    ],
+    casual: [
+      "Meanwhile, %author% says",
+      "%author% chimes in with",
+      "%author% also mentions that",
+      "Adding to this, %author% points out"
+    ],
+    storytelling: [
+      "The story continues as %author% reveals",
+      "Adding to the narrative, %author% shares",
+      "In an interesting twist, %author% notes",
+      "The plot thickens when %author% explains"
+    ]
   };
 
-  // Create a narrative summary
-  const narrative = `
+  const getTransition = (style: string, index: number) => {
+    const styleTransitions = transitions[style as keyof typeof transitions] || transitions.professional;
+    return styleTransitions[index % styleTransitions.length];
+  };
+
+  const paragraphs = cleanedTweets
+    .slice(0, settings.paragraphCount)
+    .map((tweet, index) => {
+      const sentence = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
+      let paragraph = '';
+
+      if (index === 0) {
+        const openings = {
+          professional: `In recent developments, ${tweet.author} reports that`,
+          casual: `Here's what's new: ${tweet.author} tells us that`,
+          storytelling: `Our story begins as ${tweet.author} reveals that`
+        };
+        paragraph = `${openings[settings.style as keyof typeof openings] || openings.professional} ${sentence}`;
+      } else if (index === settings.paragraphCount - 1) {
+        const conclusions = {
+          professional: `Finally, ${tweet.author} concludes that`,
+          casual: `To wrap things up, ${tweet.author} adds that`,
+          storytelling: `The story concludes as ${tweet.author} shares that`
+        };
+        paragraph = `${conclusions[settings.style as keyof typeof conclusions] || conclusions.professional} ${sentence}`;
+      } else {
+        const transition = getTransition(settings.style, index).replace('%author%', tweet.author);
+        paragraph = `${transition} ${sentence}`;
+      }
+
+      return `<p class="mb-6 text-gray-700 leading-relaxed">${paragraph}</p>`;
+    })
+    .join('\n');
+
+  return `
     <div class="narrative-content">
       <div class="prose max-w-none">
         <h2 class="text-2xl font-semibold mb-4">Latest Updates</h2>
-        ${cleanedTweets.reduce((content, tweet, index) => {
-          // Only use the specified number of paragraphs
-          if (index >= settings.paragraphCount) return content;
-
-          const sentence = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
-          let paragraph = '';
-
-          // Add source attribution in a style-appropriate way
-          if (index === 0) {
-            const openings = {
-              professional: `In recent developments, ${tweet.author} reports that`,
-              casual: `Here's what's new: ${tweet.author} tells us that`,
-              storytelling: `Our story begins as ${tweet.author} reveals that`
-            };
-            paragraph = `${openings[settings.style]} ${sentence}`;
-          } else if (index === settings.paragraphCount - 1) {
-            const conclusions = {
-              professional: `Finally, ${tweet.author} concludes that`,
-              casual: `To wrap things up, ${tweet.author} adds that`,
-              storytelling: `The story concludes as ${tweet.author} shares that`
-            };
-            paragraph = `${conclusions[settings.style]} ${sentence}`;
-          } else {
-            const transitions = getTransitions();
-            const transition = transitions[index % transitions.length].replace('%author%', tweet.author);
-            paragraph = `${transition} ${sentence}`;
-          }
-
-          return content + `<p class="mb-6 text-gray-700 leading-relaxed">${paragraph}</p>`;
-        }, '')}
+        ${paragraphs}
         <div class="text-sm text-muted-foreground mt-8">
           Last updated: ${new Date().toLocaleString()}
         </div>
       </div>
     </div>
   `;
-
-  return narrative;
 }
 
 export default function Preview() {
@@ -147,20 +147,10 @@ export default function Preview() {
     );
   }
 
-  // Process the content
-  const templateContent = template?.content || `
-    <div class="newsletter-content">
-      <h1>{{newsletter_title}}</h1>
-      <div class="newsletter-body">
-        {{tweets}}
-      </div>
-    </div>
-  `;
-
   const styles = `
     <style>
       .newsletter-content {
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family: ui-sans-serif, system-ui, sans-serif;
         max-width: 800px;
         margin: 0 auto;
         padding: 2rem;
@@ -191,23 +181,61 @@ export default function Preview() {
         color: #111827;
         margin-bottom: 1.5rem;
       }
+      .logo-container {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      .logo {
+        max-height: 50px;
+        width: auto;
+      }
     </style>
   `;
 
-  let finalContent = templateContent.replace(
-    /{{newsletter_title}}/g, 
-    newsletter?.title || 'Newsletter Preview'
-  );
+  const baseTemplate = `
+    <div class="newsletter-content">
+      <div class="logo-container">
+        {{#each logos}}
+          <img src="{{this}}" alt="Logo" class="logo" />
+        {{/each}}
+      </div>
+      <h1>{{newsletter_title}}</h1>
+      <div class="newsletter-body">
+        {{tweets}}
+      </div>
+    </div>
+  `;
 
-  finalContent = finalContent.replace(
-    /{{tweets}}/g, 
-    generateNarrativeSummary(newsletter?.tweetContent || [], newsletter?.narrativeSettings || {
-      style: 'professional',
-      wordCount: 300,
-      tone: 'formal',
-      paragraphCount: 6
-    })
-  );
+  const templateContent = template?.content || baseTemplate;
+
+  // Process logos
+  let processedContent = templateContent;
+  if (template?.logos?.length) {
+    const logoHtml = template.logos
+      .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
+      .join('');
+    processedContent = processedContent.replace(
+      /{{#each logos}}.*?{{\/each}}/s,
+      logoHtml
+    );
+  }
+
+  // Process title and tweets
+  processedContent = processedContent
+    .replace(/{{newsletter_title}}/g, template?.defaultTitle || 'Newsletter Preview')
+    .replace(
+      /{{tweets}}/g,
+      generateNarrativeSummary(newsletter?.tweetContent || [], newsletter?.narrativeSettings || {
+        style: 'professional',
+        wordCount: 300,
+        tone: 'formal',
+        paragraphCount: 6
+      })
+    );
+
+  const finalContent = styles + processedContent;
 
   return (
     <div className="flex min-h-screen">
@@ -218,30 +246,28 @@ export default function Preview() {
             <div>
               <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             </div>
-            <div className="space-y-4">
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => window.history.back()}>
-                  Back
-                </Button>
-                <Button
-                  onClick={() => fetchTweetsMutation.mutate()}
-                  disabled={fetchTweetsMutation.isPending}
-                >
-                  {fetchTweetsMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Refresh Content
-                </Button>
-              </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => window.history.back()}>
+                Back
+              </Button>
+              <Button
+                onClick={() => fetchTweetsMutation.mutate()}
+                disabled={fetchTweetsMutation.isPending}
+              >
+                {fetchTweetsMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Refresh Content
+              </Button>
             </div>
           </div>
 
           <Card>
             <CardContent className="p-6">
-              <div
+              <div 
                 className="preview-content"
                 dangerouslySetInnerHTML={{
-                  __html: styles + finalContent
+                  __html: DOMPurify.sanitize(finalContent)
                 }}
               />
             </CardContent>
