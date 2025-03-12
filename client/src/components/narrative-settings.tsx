@@ -28,33 +28,53 @@ const defaultSettings: NarrativeSettings = {
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
   const handleChange = (key: keyof NarrativeSettings, value: any) => {
     const currentSettings = { ...defaultSettings, ...settings };
-    let newValue: any = value;
+
+    // Validate and transform the value based on the field
+    let validatedValue: any = value;
 
     switch (key) {
-      case 'wordCount':
-        newValue = Math.max(100, Math.min(1000, Number(value)));
-        break;
-      case 'paragraphCount':
-        newValue = Math.max(1, Math.min(10, Number(value)));
-        break;
       case 'style':
-        if (!['professional', 'casual', 'storytelling'].includes(value)) {
-          newValue = defaultSettings.style;
-        }
+        // Ensure style is one of the allowed values
+        validatedValue = ['professional', 'casual', 'storytelling'].includes(value)
+          ? value
+          : defaultSettings.style;
         break;
       case 'tone':
-        if (!['formal', 'conversational'].includes(value)) {
-          newValue = defaultSettings.tone;
-        }
+        // Ensure tone is one of the allowed values
+        validatedValue = ['formal', 'conversational'].includes(value)
+          ? value
+          : defaultSettings.tone;
         break;
+      case 'wordCount':
+        // Ensure word count is within bounds
+        validatedValue = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
+        break;
+      case 'paragraphCount':
+        // Ensure paragraph count is within bounds
+        validatedValue = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
+        break;
+      default:
+        validatedValue = value;
     }
 
-    onChange({
+    // Create new settings object with validated value
+    const newSettings = {
       ...currentSettings,
-      [key]: newValue
+      [key]: validatedValue
+    };
+
+    // Log the change for debugging
+    console.log('Narrative settings change:', {
+      key,
+      value,
+      validatedValue,
+      newSettings
     });
+
+    onChange(newSettings);
   };
 
+  // Ensure we have valid settings by merging with defaults
   const safeSettings = { ...defaultSettings, ...settings };
 
   return (

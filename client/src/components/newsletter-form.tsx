@@ -60,9 +60,17 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         const method = newsletter ? "PATCH" : "POST";
         const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
+        // Explicitly validate the narrative settings
+        const narrativeSettings = {
+          style: formData.narrativeSettings?.style || defaultNarrativeSettings.style,
+          wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
+          tone: formData.narrativeSettings?.tone || defaultNarrativeSettings.tone,
+          paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
+        };
+
         const validatedData = {
           templateId: Number(formData.templateId),
-          keywords: formData.keywords || [],
+          keywords: Array.isArray(formData.keywords) ? formData.keywords : [],
           scheduleTime: formData.scheduleTime,
           tweetFilters: {
             verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
@@ -72,32 +80,44 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             safeMode: Boolean(formData.tweetFilters?.safeMode),
             newsOutlets: Array.isArray(formData.tweetFilters?.newsOutlets) ? formData.tweetFilters.newsOutlets : []
           },
-          narrativeSettings: {
-            ...defaultNarrativeSettings,
-            ...formData.narrativeSettings,
-            wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
-            paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
-          }
+          narrativeSettings
         };
 
-        const res = await fetch(url, {
+        console.log('Making request to:', url);
+        console.log('Request data:', JSON.stringify(validatedData, null, 2));
+
+        const response = await fetch(url, {
           method,
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
           },
           credentials: 'include',
           body: JSON.stringify(validatedData)
         });
 
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null);
-          if (errorData) {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        if (!response.ok) {
+          try {
+            const errorData = JSON.parse(responseText);
             throw new Error(errorData.message || 'Failed to save newsletter');
+          } catch (parseError) {
+            console.error('Error parsing response:', parseError);
+            throw new Error('Server error - please try again');
           }
-          throw new Error(`Server error: ${res.status}`);
         }
 
-        return await res.json();
+        try {
+          return JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing success response:', parseError);
+          throw new Error('Invalid server response');
+        }
       } catch (error: any) {
         console.error('Newsletter operation error:', error);
         throw new Error(error.message || 'Failed to save newsletter');
