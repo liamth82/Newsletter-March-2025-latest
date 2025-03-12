@@ -28,36 +28,31 @@ const defaultSettings: NarrativeSettings = {
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
   const handleChange = (key: keyof NarrativeSettings, value: any) => {
     const currentSettings = { ...defaultSettings, ...settings };
-    let validatedValue = value;
+    const newSettings = { ...currentSettings };
 
     switch (key) {
       case 'style':
-        if (!['professional', 'casual', 'storytelling'].includes(value)) {
-          validatedValue = defaultSettings.style;
+        if (['professional', 'casual', 'storytelling'].includes(value)) {
+          newSettings.style = value as NarrativeStyle;
         }
         break;
       case 'tone':
-        if (!['formal', 'conversational'].includes(value)) {
-          validatedValue = defaultSettings.tone;
+        if (['formal', 'conversational'].includes(value)) {
+          newSettings.tone = value as NarrativeTone;
         }
         break;
       case 'wordCount':
-        validatedValue = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
+        newSettings.wordCount = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
         break;
       case 'paragraphCount':
-        validatedValue = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
+        newSettings.paragraphCount = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
         break;
     }
-
-    const newSettings: NarrativeSettings = {
-      ...currentSettings,
-      [key]: validatedValue
-    };
 
     onChange(newSettings);
   };
 
-  // Ensure we have valid settings by merging with defaults
+  // Use safe settings that always include defaults
   const safeSettings = { ...defaultSettings, ...settings };
 
   return (
