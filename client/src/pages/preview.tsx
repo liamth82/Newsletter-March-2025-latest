@@ -18,7 +18,7 @@ export default function Preview() {
   });
 
   const { data: template, isLoading: loadingTemplate } = useQuery<Template>({
-    queryKey: ["/api/templates", newsletter?.templateId],
+    queryKey: [`/api/templates/${newsletter?.templateId}`],
     enabled: !!newsletter?.templateId,
   });
 
@@ -116,6 +116,40 @@ export default function Preview() {
   // Process the template content
   let processedContent = template.content;
 
+  // Add base styling
+  const styles = `
+    <style>
+      .preview-content {
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .tweet {
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        background-color: white;
+      }
+      .tweet-content p {
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+      }
+      .tweet-metadata {
+        color: #64748b;
+        font-size: 0.875rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .no-tweets-message {
+        padding: 2rem;
+        text-align: center;
+        background-color: #f8fafc;
+        border-radius: 0.5rem;
+        color: #64748b;
+      }
+    </style>
+  `;
+
   // Replace newsletter title
   processedContent = processedContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
 
@@ -153,42 +187,8 @@ export default function Preview() {
   // Replace tweets placeholder
   processedContent = processedContent.replace(/{{tweets}}/g, tweetSection);
 
-  // Apply styles
-  const styles = `
-    <style>
-      .preview-content {
-        font-family: system-ui, -apple-system, sans-serif;
-      }
-      .tweet {
-        border: 1px solid #e2e8f0;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.5rem;
-        background-color: white;
-      }
-      .tweet-content p {
-        margin-bottom: 0.5rem;
-        line-height: 1.5;
-      }
-      .tweet-metadata {
-        color: #64748b;
-        font-size: 0.875rem;
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-      }
-      .no-tweets-message {
-        padding: 2rem;
-        text-align: center;
-        background-color: #f8fafc;
-        border-radius: 0.5rem;
-        color: #64748b;
-      }
-    </style>
-  `;
-
   const finalContent = styles + processedContent;
-  console.log('Final content generated, length:', finalContent.length);
+  console.log('Final content length:', finalContent.length);
 
   return (
     <div className="flex min-h-screen">
