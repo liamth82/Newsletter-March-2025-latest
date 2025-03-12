@@ -111,16 +111,31 @@ export default function Preview() {
 
   const fetchTweetsMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
+      const requestData = {
         keywords: newsletter?.keywords || [],
-        ...newsletter?.tweetFilters
-      });
+        verifiedOnly: newsletter?.tweetFilters?.verifiedOnly || false,
+        minFollowers: newsletter?.tweetFilters?.minFollowers || 0,
+        excludeReplies: newsletter?.tweetFilters?.excludeReplies || false,
+        excludeRetweets: newsletter?.tweetFilters?.excludeRetweets || false,
+        safeMode: newsletter?.tweetFilters?.safeMode || true,
+        newsOutlets: newsletter?.tweetFilters?.newsOutlets || []
+      };
+
+      console.log('Fetching tweets with:', requestData);
+
+      const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, requestData);
+
       if (!res.ok) {
-        throw new Error('Failed to fetch tweets');
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to fetch tweets');
       }
-      return res.json();
+
+      const data = await res.json();
+      console.log('Received tweet data:', data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Successfully updated newsletter with tweets:', data);
       queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
       toast({
         title: "Success",
@@ -128,6 +143,7 @@ export default function Preview() {
       });
     },
     onError: (error: Error) => {
+      console.error('Error fetching tweets:', error);
       toast({
         title: "Error",
         description: error.message,
