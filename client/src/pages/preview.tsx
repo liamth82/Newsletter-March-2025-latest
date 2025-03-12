@@ -86,62 +86,16 @@ export default function Preview() {
   console.log('Current newsletter state:', newsletter);
   console.log('Current template state:', template);
 
-  let processedContent = template.content || '';
-
-  // Add styling to the content
-  const styleSheet = Object.entries(template.styles || {})
-    .map(([selector, styles]) => {
-      const styleRules = Object.entries(styles as Record<string, string>)
-        .map(([prop, value]) => `${prop}: ${value};`)
-        .join(" ");
-      return `${selector} { ${styleRules} }`;
-    })
-    .join("\n");
-
-  processedContent = `<style>${styleSheet}</style>${processedContent}`;
-
-  // Replace newsletter title
-  processedContent = processedContent.replace(/{{newsletter_title}}/g, newsletter.title || 'Newsletter');
-
-  // Handle tweet content replacement
-  if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    console.log('Tweet content available:', newsletter.tweetContent);
-    const tweetHtml = newsletter.tweetContent
-      .map((tweet: any) => `
-        <div class="tweet bg-muted p-4 mb-4 rounded-lg shadow">
-          <div class="tweet-content">
-            <p class="text-foreground text-base mb-2">${tweet.text}</p>
-            <div class="tweet-metadata flex items-center gap-2 text-sm text-muted-foreground">
-              <span>${new Date(tweet.created_at).toLocaleString()}</span>
-              ${tweet.metrics ? `
-                <span>•</span>
-                <span>${tweet.metrics.like_count} likes</span>
-                <span>•</span>
-                <span>${tweet.metrics.retweet_count} retweets</span>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-      `)
-      .join("");
-
-    processedContent = processedContent.replace(/{{tweets}}/g, tweetHtml);
-  } else {
-    console.log('No tweets found, newsletter data:', newsletter);
-    processedContent = processedContent.replace(
-      /{{tweets}}/g,
-      `<div class="p-4 border rounded bg-muted">
-        <p class="text-muted-foreground">No tweets found. Try updating your keywords or fetch tweets again.</p>
-       </div>`
-    );
-  }
-
-  // Add base styling for tweet elements
-  const additionalStyles = `
+  // Add base styling
+  const baseStyles = `
     <style>
       .tweet {
         border: 1px solid hsl(var(--border));
         transition: all 0.2s ease-in-out;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background-color: hsl(var(--card));
+        border-radius: 0.5rem;
       }
       .tweet:hover {
         transform: translateY(-2px);
@@ -154,13 +108,62 @@ export default function Preview() {
         border-top: 1px solid hsl(var(--border));
         padding-top: 0.5rem;
         margin-top: 0.5rem;
+        color: hsl(var(--muted-foreground));
+      }
+      .newsletter-section {
+        margin-bottom: 2rem;
       }
     </style>
   `;
 
-  processedContent = additionalStyles + processedContent;
+  // Add custom template styles
+  const templateStyles = Object.entries(template.styles || {})
+    .map(([selector, styles]) => {
+      const styleRules = Object.entries(styles as Record<string, string>)
+        .map(([prop, value]) => `${prop}: ${value};`)
+        .join(" ");
+      return `${selector} { ${styleRules} }`;
+    })
+    .join("\n");
 
-  // Handle logo placeholder if present
+  // Start with base template content
+  let processedContent = template.content || '';
+
+  // Replace newsletter title
+  processedContent = processedContent.replace(
+    /{{newsletter_title}}/g, 
+    newsletter.title || 'Newsletter'
+  );
+
+  // Process tweet content
+  let tweetContent = '<div class="p-4 border rounded bg-muted"><p class="text-muted-foreground">No tweets available</p></div>';
+
+  if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
+    console.log('Processing tweets:', newsletter.tweetContent);
+    tweetContent = newsletter.tweetContent
+      .map((tweet: any) => `
+        <div class="tweet">
+          <div class="tweet-content">
+            <p class="text-base">${tweet.text}</p>
+            <div class="tweet-metadata flex items-center gap-2 text-sm">
+              <span>${new Date(tweet.created_at).toLocaleString()}</span>
+              ${tweet.metrics ? `
+                <span>•</span>
+                <span>${tweet.metrics.like_count} likes</span>
+                <span>•</span>
+                <span>${tweet.metrics.retweet_count} retweets</span>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `)
+      .join("\n");
+  }
+
+  // Replace tweet placeholder with actual content
+  processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
+
+  // Handle logos if present
   if (template.logos && template.logos.length > 0) {
     const logoHtml = template.logos
       .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
@@ -171,7 +174,14 @@ export default function Preview() {
     );
   }
 
-  console.log('Final processed content:', processedContent);
+  // Combine all styles and content
+  const finalContent = `
+    ${baseStyles}
+    <style>${templateStyles}</style>
+    ${processedContent}
+  `;
+
+  console.log('Final processed content:', finalContent);
 
   return (
     <div className="flex min-h-screen">
@@ -198,7 +208,7 @@ export default function Preview() {
           <Card>
             <CardContent className="p-6">
               <div className="prose prose-lg max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: processedContent }} />
+                <div dangerouslySetInnerHTML={{ __html: finalContent }} />
               </div>
             </CardContent>
           </Card>
