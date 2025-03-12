@@ -70,8 +70,7 @@ export default function Preview() {
       if (!res.ok) {
         throw new Error('Failed to fetch tweets');
       }
-      const data = await res.json();
-      return data;
+      return res.json();
     },
     onSuccess: (data) => {
       queryClient.setQueryData([`/api/newsletters/${id}`], data);
@@ -100,7 +99,7 @@ export default function Preview() {
     );
   }
 
-  // Base template if none is provided
+  // Base template
   const baseTemplate = `
     <div class="newsletter-content">
       <h1 class="text-3xl font-bold mb-6">{{newsletter_title}}</h1>
@@ -110,18 +109,25 @@ export default function Preview() {
     </div>
   `;
 
-  const processedContent = template?.content || baseTemplate;
-  let finalContent = processedContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
+  // First, replace the title
+  const titleReplaced = (template?.content || baseTemplate).replace(
+    /{{newsletter_title}}/g,
+    'Newsletter Preview'
+  );
 
-  if (newsletter?.tweetContent && newsletter.tweetContent.length > 0) {
+  // Then, handle the tweet content
+  let finalContent = titleReplaced;
+  if (newsletter?.tweetContent && Array.isArray(newsletter.tweetContent)) {
+    console.log('Found tweet content:', newsletter.tweetContent);
     const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
     finalContent = finalContent.replace(/{{tweets}}/g, narrativeContent);
   } else {
-    finalContent = finalContent.replace(/{{tweets}}/g, `
-      <div class="no-tweets-message">
+    finalContent = finalContent.replace(
+      /{{tweets}}/g,
+      `<div class="no-tweets-message">
         <p>No tweets available. Click "Fetch Tweets" to load content.</p>
-      </div>
-    `);
+      </div>`
+    );
   }
 
   // Add styling
