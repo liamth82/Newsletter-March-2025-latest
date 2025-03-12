@@ -9,7 +9,7 @@ import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
 import { NarrativeSettings, type NarrativeSettings as NarrativeSettingsType } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import {  queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { Newsletter, Template } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +42,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       templateId: newsletter?.templateId || templates?.[0]?.id,
       keywords: newsletter?.keywords || [],
       scheduleTime: newsletter?.scheduleTime,
-      tweetFilters: newsletter?.tweetFilters || {
+      tweetFilters: {
         verifiedOnly: false,
         minFollowers: 0,
         excludeReplies: false,
@@ -50,15 +50,24 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: true,
         newsOutlets: []
       },
-      narrativeSettings: newsletter?.narrativeSettings || defaultNarrativeSettings
+      narrativeSettings: defaultNarrativeSettings
     }
   });
 
   const createMutation = useMutation({
     mutationFn: async (formData: any) => {
+      // First, validate the narrative settings
+      const narrativeSettings: NarrativeSettingsType = {
+        style: formData.narrativeSettings?.style || defaultNarrativeSettings.style,
+        wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
+        tone: formData.narrativeSettings?.tone || defaultNarrativeSettings.tone,
+        paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
+      };
+
+      // Prepare the validated payload
       const payload = {
         templateId: Number(formData.templateId),
-        keywords: formData.keywords || [],
+        keywords: Array.isArray(formData.keywords) ? formData.keywords : [],
         scheduleTime: formData.scheduleTime,
         tweetFilters: {
           verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
@@ -66,35 +75,39 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           excludeReplies: Boolean(formData.tweetFilters?.excludeReplies),
           excludeRetweets: Boolean(formData.tweetFilters?.excludeRetweets),
           safeMode: Boolean(formData.tweetFilters?.safeMode),
-          newsOutlets: formData.tweetFilters?.newsOutlets || []
+          newsOutlets: Array.isArray(formData.tweetFilters?.newsOutlets) ? formData.tweetFilters.newsOutlets : []
         },
-        narrativeSettings: {
-          style: formData.narrativeSettings?.style || defaultNarrativeSettings.style,
-          wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
-          tone: formData.narrativeSettings?.tone || defaultNarrativeSettings.tone,
-          paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
-        }
+        narrativeSettings
       };
-
-      // Log the payload for debugging
-      console.log('Submitting newsletter payload:', JSON.stringify(payload, null, 2));
 
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
       try {
-        const res = await apiRequest(method, url, payload);
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        });
 
         if (!res.ok) {
-          const errorText = await res.text();
-          console.error('Server error response:', errorText);
-          throw new Error('Failed to save newsletter. Please try again.');
+          const contentType = res.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Failed to save newsletter');
+          } else {
+            throw new Error('Failed to save newsletter');
+          }
         }
 
-        return await res.json();
-      } catch (error) {
+        const data = await res.json();
+        return data;
+      } catch (error: any) {
         console.error('Newsletter mutation error:', error);
-        throw error;
+        throw new Error(error.message || 'Failed to save newsletter');
       }
     },
     onSuccess: () => {
