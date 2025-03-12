@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { insertNewsletterSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
 import { NarrativeSettings, type NarrativeSettings as NarrativeSettingsType } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
-import {  queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { Newsletter, Template } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -56,72 +56,36 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
 
   const createMutation = useMutation({
     mutationFn: async (formData: any) => {
-      try {
-        const method = newsletter ? "PATCH" : "POST";
-        const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
-
-        // Explicitly validate the narrative settings
-        const narrativeSettings = {
+      const payload = {
+        templateId: Number(formData.templateId),
+        keywords: formData.keywords,
+        scheduleTime: formData.scheduleTime,
+        tweetFilters: {
+          verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
+          minFollowers: Number(formData.tweetFilters?.minFollowers || 0),
+          excludeReplies: Boolean(formData.tweetFilters?.excludeReplies),
+          excludeRetweets: Boolean(formData.tweetFilters?.excludeRetweets),
+          safeMode: Boolean(formData.tweetFilters?.safeMode),
+          newsOutlets: formData.tweetFilters?.newsOutlets || []
+        },
+        narrativeSettings: {
           style: formData.narrativeSettings?.style || defaultNarrativeSettings.style,
           wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
           tone: formData.narrativeSettings?.tone || defaultNarrativeSettings.tone,
           paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
-        };
-
-        const validatedData = {
-          templateId: Number(formData.templateId),
-          keywords: Array.isArray(formData.keywords) ? formData.keywords : [],
-          scheduleTime: formData.scheduleTime,
-          tweetFilters: {
-            verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
-            minFollowers: Number(formData.tweetFilters?.minFollowers || 0),
-            excludeReplies: Boolean(formData.tweetFilters?.excludeReplies),
-            excludeRetweets: Boolean(formData.tweetFilters?.excludeRetweets),
-            safeMode: Boolean(formData.tweetFilters?.safeMode),
-            newsOutlets: Array.isArray(formData.tweetFilters?.newsOutlets) ? formData.tweetFilters.newsOutlets : []
-          },
-          narrativeSettings
-        };
-
-        console.log('Making request to:', url);
-        console.log('Request data:', JSON.stringify(validatedData, null, 2));
-
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify(validatedData)
-        });
-
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-        const responseText = await response.text();
-        console.log('Raw response:', responseText);
-
-        if (!response.ok) {
-          try {
-            const errorData = JSON.parse(responseText);
-            throw new Error(errorData.message || 'Failed to save newsletter');
-          } catch (parseError) {
-            console.error('Error parsing response:', parseError);
-            throw new Error('Server error - please try again');
-          }
         }
+      };
 
-        try {
-          return JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('Error parsing success response:', parseError);
-          throw new Error('Invalid server response');
-        }
-      } catch (error: any) {
-        console.error('Newsletter operation error:', error);
-        throw new Error(error.message || 'Failed to save newsletter');
+      const method = newsletter ? "PATCH" : "POST";
+      const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
+
+      const res = await apiRequest(method, url, payload);
+
+      if (!res.ok) {
+        throw new Error('Failed to save newsletter');
       }
+
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
