@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewsOutletsManager } from "./news-outlets-manager";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sector } from "@shared/schema";
 
@@ -20,10 +20,11 @@ interface TweetFilters {
 
 interface TweetFiltersProps {
   onFiltersChange: (filters: TweetFilters) => void;
+  initialFilters?: TweetFilters;
 }
 
-export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
-  const [filters, setFilters] = useState<TweetFilters>({
+export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersProps) {
+  const [filters, setFilters] = useState<TweetFilters>(initialFilters || {
     verifiedOnly: false,
     minFollowers: 0,
     excludeReplies: false,
@@ -31,6 +32,12 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
     safeMode: true,
     newsOutlets: [],
   });
+
+  useEffect(() => {
+    if (initialFilters) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters]);
 
   const { data: sectors = [] } = useQuery<Sector[]>({
     queryKey: ["/api/sectors"],

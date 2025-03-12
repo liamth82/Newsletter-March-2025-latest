@@ -154,6 +154,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                   <FormControl>
                     <TweetFilters
                       onFiltersChange={field.onChange}
+                      initialFilters={field.value}
                     />
                   </FormControl>
                   <FormMessage />
