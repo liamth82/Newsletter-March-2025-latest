@@ -12,7 +12,7 @@ import DOMPurify from 'dompurify';
 
 function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType) {
   if (!tweets || tweets.length === 0) {
-    return '<p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p>';
+    return '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
   }
 
   // Clean and sort tweets by date
@@ -118,36 +118,19 @@ export default function Preview() {
         excludeReplies: newsletter?.tweetFilters?.excludeReplies || false,
         excludeRetweets: newsletter?.tweetFilters?.excludeRetweets || false,
         safeMode: newsletter?.tweetFilters?.safeMode || true,
-        // Convert full URLs to just handles
         newsOutlets: (newsletter?.tweetFilters?.newsOutlets || []).map(outlet => {
-          // Extract handle from URL or use as is if it's already a handle
           const match = outlet.match(/(?:x\.com\/|twitter\.com\/)([^\/]+)/);
           return match ? match[1] : outlet.replace(/^@/, '');
         })
       };
 
-      console.log('Fetching tweets with:', requestData);
-
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, requestData);
-
       if (!res.ok) {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const error = await res.json();
-          throw new Error(error.message || 'Failed to fetch tweets');
-        } else {
-          // Handle non-JSON error responses
-          const text = await res.text();
-          throw new Error(`Server error: ${res.status}`);
-        }
+        throw new Error('Failed to fetch tweets');
       }
-
-      const data = await res.json();
-      console.log('Received tweet data:', data);
-      return data;
+      return await res.json();
     },
     onSuccess: (data) => {
-      console.log('Successfully updated newsletter with tweets:', data);
       queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
       toast({
         title: "Success",
@@ -155,7 +138,6 @@ export default function Preview() {
       });
     },
     onError: (error: Error) => {
-      console.error('Error fetching tweets:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -175,6 +157,59 @@ export default function Preview() {
     );
   }
 
+  if (!newsletter || !template) {
+    return (
+      <div className="flex min-h-screen">
+        <SidebarNav />
+        <main className="flex-1 p-8">
+          <div className="max-w-4xl mx-auto">
+            <p>Newsletter or template not found</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Process template content with Handlebars-like replacements
+  let processedContent = template.content;
+
+  // Replace newsletter title
+  processedContent = processedContent.replace(
+    /{{newsletter_title}}/g,
+    template.defaultTitle || 'Newsletter Preview'
+  );
+
+  // Generate tweet content
+  const tweetContent = generateNarrativeSummary(
+    newsletter.tweetContent || [],
+    newsletter.narrativeSettings || {
+      style: 'professional',
+      wordCount: 300,
+      tone: 'formal',
+      paragraphCount: 6
+    }
+  );
+
+  // Replace tweets placeholder
+  processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
+
+  // Handle logos section
+  if (template.logos?.length) {
+    const logoHtml = template.logos
+      .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
+      .join('');
+    processedContent = processedContent.replace(
+      /{{#each logos}}[\s\S]*?{{\/each}}/g,
+      logoHtml
+    );
+  } else {
+    processedContent = processedContent.replace(
+      /<div class="logo-container">[\s\S]*?<\/div>/,
+      ''
+    );
+  }
+
+  // Apply styles
   const styles = `
     <style>
       .newsletter-content {
@@ -187,31 +222,15 @@ export default function Preview() {
         padding: 1rem;
         margin-bottom: 1.5rem;
       }
-      .narrative-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 0.5rem;
-      }
-      .prose {
-        max-width: none;
-      }
-      .prose p {
-        margin-bottom: 1.5rem;
-        line-height: 1.8;
-        color: #374151;
-      }
-      .prose h2 {
-        color: #111827;
-        margin-bottom: 1.5rem;
-      }
-      .newsletter-body {
-        margin-top: 2rem;
-      }
       h1 {
         font-size: 2rem;
         font-weight: bold;
-        color: #111827;
+        color: hsl(var(--primary));
         margin-bottom: 1.5rem;
+      }
+      p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
       }
       .logo-container {
         display: flex;
@@ -226,56 +245,13 @@ export default function Preview() {
     </style>
   `;
 
-  // Process the template content
-  let processedContent = template?.content || '';
-
-  // Handle logos if present
-  if (template?.logos?.length) {
-    const logoHtml = template.logos
-      .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
-      .join('');
-    processedContent = processedContent.replace(
-      /{{#each logos}}[\s\S]*?{{\/each}}/g,
-      logoHtml
-    );
-  } else {
-    // Remove the logo section if no logos
-    processedContent = processedContent.replace(
-      /<div class="logo-container">[\s\S]*?<\/div>/,
-      ''
-    );
-  }
-
-  // Replace newsletter title
-  processedContent = processedContent.replace(
-    /{{newsletter_title}}/g,
-    template?.defaultTitle || 'Newsletter Preview'
-  );
-
-  // Generate and insert tweet content
-  const tweetContent = generateNarrativeSummary(
-    newsletter?.tweetContent || [],
-    newsletter?.narrativeSettings || {
-      style: 'professional',
-      wordCount: 300,
-      tone: 'formal',
-      paragraphCount: 6
-    }
-  );
-  processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
-
-  // Combine styles with content
-  const finalContent = styles + processedContent;
-
   return (
     <div className="flex min-h-screen">
       <SidebarNav />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold">Newsletter Preview</h1>
-            </div>
+            <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => window.history.back()}>
                 Back
@@ -297,7 +273,7 @@ export default function Preview() {
               <div 
                 className="preview-content"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(finalContent)
+                  __html: DOMPurify.sanitize(styles + processedContent)
                 }}
               />
             </CardContent>

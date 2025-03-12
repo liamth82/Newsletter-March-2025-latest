@@ -58,7 +58,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     mutationFn: async (formData: any) => {
       const payload = {
         templateId: Number(formData.templateId),
-        keywords: formData.keywords,
+        keywords: formData.keywords || [],
         scheduleTime: formData.scheduleTime,
         tweetFilters: {
           verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
@@ -76,24 +76,32 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         }
       };
 
+      // Log the payload for debugging
+      console.log('Submitting newsletter payload:', JSON.stringify(payload, null, 2));
+
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
-      const res = await apiRequest(method, url, payload);
+      try {
+        const res = await apiRequest(method, url, payload);
 
-      if (!res.ok) {
-        throw new Error('Failed to save newsletter');
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Server error response:', errorText);
+          throw new Error('Failed to save newsletter. Please try again.');
+        }
+
+        return await res.json();
+      } catch (error) {
+        console.error('Newsletter mutation error:', error);
+        throw error;
       }
-
-      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
       toast({
         title: "Success",
-        description: newsletter
-          ? "Newsletter updated successfully"
-          : "Newsletter created successfully",
+        description: newsletter ? "Newsletter updated successfully" : "Newsletter created successfully",
       });
       onSuccess();
     },
