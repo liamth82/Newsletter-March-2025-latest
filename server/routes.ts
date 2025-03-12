@@ -17,6 +17,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json(parsed.error);
     }
 
+    // Ensure template content has required placeholders
+    if (!parsed.data.content || !parsed.data.content.includes('{{newsletter_title}}') || !parsed.data.content.includes('{{tweets}}')) {
+      return res.status(400).json({
+        message: "Template content must include {{newsletter_title}} and {{tweets}} placeholders"
+      });
+    }
+
     const template = await storage.createTemplate({
       ...parsed.data,
       userId: req.user.id,
@@ -39,7 +46,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Template not found:', req.params.id);
         return res.status(404).json({ message: "Template not found" });
       }
-      console.log('Template found:', template);
+
+      // Log template content for debugging
+      console.log('Template found:', {
+        id: template.id,
+        content: template.content,
+        hasTitle: template.content?.includes('{{newsletter_title}}'),
+        hasTweets: template.content?.includes('{{tweets}}')
+      });
+
       res.json(template);
     } catch (error) {
       console.error('Error fetching template:', error);

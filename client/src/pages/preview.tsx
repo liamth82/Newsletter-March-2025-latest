@@ -24,6 +24,8 @@ function generateNarrativeSummary(tweets: any[]) {
     return acc;
   }, {});
 
+  console.log('Grouped tweets by source:', sections);
+
   // Generate narrative paragraphs
   let narrative = '';
   Object.entries(sections).forEach(([source, sourceTweets]: [string, any]) => {
@@ -45,6 +47,7 @@ function generateNarrativeSummary(tweets: any[]) {
     }
   });
 
+  console.log('Generated narrative length:', narrative.length);
   return narrative;
 }
 
@@ -191,16 +194,18 @@ export default function Preview() {
 
   // Process tweets
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    console.log('Processing tweets:', newsletter.tweetContent.length, 'tweets found');
+    console.log('Processing tweets:', newsletter.tweetContent);
     const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
+    console.log('Generated narrative content:', narrativeContent);
     processedContent = processedContent.replace(/{{tweets}}/g, narrativeContent);
   } else {
     console.log('No tweets found in newsletter');
-    processedContent = processedContent.replace(/{{tweets}}/g, `
-      <div class="no-tweets-message">
+    processedContent = processedContent.replace(
+      /{{tweets}}/g,
+      `<div class="no-tweets-message">
         <p>No tweets available. Click "Fetch Tweets" to load content.</p>
-      </div>
-    `);
+       </div>`
+    );
   }
 
   const finalContent = styles + processedContent;
