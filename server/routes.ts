@@ -102,6 +102,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
         tweetContent: processedTweets
       });
+
+      console.log('Updated newsletter:', newsletter);
       res.json(newsletter);
     } catch (error) {
       console.error('Failed to fetch tweets:', error);

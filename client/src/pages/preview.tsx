@@ -24,15 +24,19 @@ export default function Preview() {
 
   const fetchTweetsMutation = useMutation({
     mutationFn: async () => {
+      console.log('Fetching tweets with keywords:', newsletter?.keywords);
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
         keywords: newsletter?.keywords || ["technology"]
       });
       if (!res.ok) {
         throw new Error('Failed to fetch tweets');
       }
-      return await res.json();
+      const data = await res.json();
+      console.log('Received response from tweet fetch:', data);
+      return data;
     },
     onSuccess: (data) => {
+      console.log('Updating newsletter data with tweets:', data);
       queryClient.setQueryData([`/api/newsletters/${id}`], data);
       toast({
         title: "Tweets fetched successfully",
@@ -60,6 +64,7 @@ export default function Preview() {
   }
 
   if (!newsletter || !template) {
+    console.log('Newsletter or template not found');
     return (
       <div className="flex min-h-screen">
         <SidebarNav />
@@ -77,6 +82,9 @@ export default function Preview() {
       </div>
     );
   }
+
+  console.log('Current newsletter state:', newsletter);
+  console.log('Current template state:', template);
 
   let processedContent = template.content || '';
 
@@ -162,6 +170,8 @@ export default function Preview() {
       logoHtml
     );
   }
+
+  console.log('Final processed content:', processedContent);
 
   return (
     <div className="flex min-h-screen">

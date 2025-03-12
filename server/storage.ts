@@ -116,8 +116,11 @@ export class MemStorage implements IStorage {
   async updateNewsletter(id: number, data: Partial<Newsletter>): Promise<Newsletter> {
     const newsletter = this.newsletters.get(id);
     if (!newsletter) throw new Error("Newsletter not found");
-    
+
     const updatedNewsletter = { ...newsletter, ...data };
+    console.log('Updating newsletter with data:', data);
+    console.log('Updated newsletter object:', updatedNewsletter);
+
     this.newsletters.set(id, updatedNewsletter);
     return updatedNewsletter;
   }
