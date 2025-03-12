@@ -11,6 +11,7 @@ interface TweetFilters {
   excludeReplies?: boolean;
   excludeRetweets?: boolean;
   safeMode?: boolean;
+  newsOutlets?: string[];
 }
 
 const client = new TwitterApi({
@@ -31,6 +32,13 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
 
     // Build query string with filters
     const queryParts = [...keywords];
+
+    // Add news outlet filtering if specified
+    if (filters.newsOutlets && filters.newsOutlets.length > 0) {
+      const fromQueries = filters.newsOutlets.map(handle => `from:${handle.replace('@', '')}`);
+      queryParts.push(`(${fromQueries.join(' OR ')})`);
+    }
+
     if (filters.verifiedOnly) {
       queryParts.push('is:verified');
     }
@@ -41,19 +49,20 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       queryParts.push('-is:retweet');
     }
     if (filters.safeMode) {
-      queryParts.push('-has:links -has:mentions'); // Exclude tweets with links and mentions
-      queryParts.push('lang:en'); // Only English tweets
+      queryParts.push('-has:links -has:mentions');
+      queryParts.push('lang:en');
     }
 
+    // Query for each keyword and filter results
     const tweets = await Promise.all(
       queryParts.map(async (keyword) => {
         console.log(`Fetching tweets for keyword: ${keyword}`);
         try {
           const response = await appClient.v2.search(keyword, {
-            max_results: 10,
+            max_results: 20, // Increased to get more content for summarization
             expansions: ['author_id'],
             'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
-            'user.fields': ['verified', 'public_metrics'],
+            'user.fields': ['verified', 'public_metrics', 'username'],
           });
 
           if (!response.data.data) {
@@ -89,8 +98,14 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
             return true;
           });
 
-          console.log(`Found ${filteredTweets.length} filtered tweets for keyword: ${keyword}`);
-          return filteredTweets;
+          // Add author username to tweet objects
+          return filteredTweets.map(tweet => {
+            const author = users.find(u => u.id === tweet.author_id);
+            return {
+              ...tweet,
+              author_username: author?.username
+            };
+          });
         } catch (error) {
           console.error(`Error searching for keyword "${keyword}":`, error);
           return [];
@@ -102,6 +117,9 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     const uniqueTweets = Array.from(
       new Set(tweets.flat().map((t) => JSON.stringify(t)))
     ).map((t) => JSON.parse(t));
+
+    // Sort tweets by creation date
+    uniqueTweets.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     console.log('Total unique tweets found:', uniqueTweets.length);
     return uniqueTweets;

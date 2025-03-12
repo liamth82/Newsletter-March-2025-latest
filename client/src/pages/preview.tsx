@@ -9,6 +9,45 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { TweetFilters } from "@/components/tweet-filters";
 
+function generateNarrativeSummary(tweets: any[]) {
+  if (!tweets || tweets.length === 0) {
+    return '<p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p>';
+  }
+
+  // Group tweets by source/topic
+  const sections = tweets.reduce((acc: any, tweet: any) => {
+    const source = tweet.author_username || 'Unknown Source';
+    if (!acc[source]) {
+      acc[source] = [];
+    }
+    acc[source].push(tweet);
+    return acc;
+  }, {});
+
+  // Generate narrative paragraphs
+  let narrative = '';
+  Object.entries(sections).forEach(([source, sourceTweets]: [string, any]) => {
+    const tweets = sourceTweets as any[];
+    if (tweets.length > 0) {
+      narrative += `
+        <div class="narrative-section mb-6">
+          <h3 class="text-lg font-semibold mb-2">Updates from @${source}</h3>
+          <div class="prose">
+            ${tweets.map(tweet => `
+              <p class="mb-4">${tweet.text}</p>
+            `).join('')}
+          </div>
+          <div class="text-sm text-muted-foreground">
+            Last updated: ${new Date(tweets[0].created_at).toLocaleString()}
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  return narrative;
+}
+
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -28,9 +67,9 @@ export default function Preview() {
 
   const fetchTweetsMutation = useMutation({
     mutationFn: async (filters: any) => {
-      console.log('Fetching tweets with keywords and filters:', { 
+      console.log('Fetching tweets with keywords and filters:', {
         keywords: newsletter?.keywords,
-        filters 
+        filters
       });
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, {
         keywords: newsletter?.keywords || ["technology"],
@@ -126,23 +165,16 @@ export default function Preview() {
       .preview-content {
         font-family: system-ui, -apple-system, sans-serif;
       }
-      .tweet {
-        border: 1px solid #e2e8f0;
-        padding: 1rem;
+      .narrative-section {
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 1.5rem;
+      }
+      .narrative-section:last-child {
+        border-bottom: none;
+      }
+      .narrative-section p {
+        line-height: 1.6;
         margin-bottom: 1rem;
-        border-radius: 0.5rem;
-        background-color: white;
-      }
-      .tweet-content p {
-        margin-bottom: 0.5rem;
-        line-height: 1.5;
-      }
-      .tweet-metadata {
-        color: #64748b;
-        font-size: 0.875rem;
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
       }
       .no-tweets-message {
         padding: 2rem;
@@ -158,38 +190,18 @@ export default function Preview() {
   processedContent = processedContent.replace(/{{newsletter_title}}/g, 'Newsletter Preview');
 
   // Process tweets
-  let tweetSection = '';
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
     console.log('Processing tweets:', newsletter.tweetContent.length, 'tweets found');
-    tweetSection = newsletter.tweetContent
-      .map((tweet: any) => `
-        <div class="tweet">
-          <div class="tweet-content">
-            <p>${tweet.text}</p>
-            <div class="tweet-metadata">
-              <span>${new Date(tweet.created_at).toLocaleString()}</span>
-              ${tweet.metrics ? `
-                <span>•</span>
-                <span>${tweet.metrics.like_count} likes</span>
-                <span>•</span>
-                <span>${tweet.metrics.retweet_count} retweets</span>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-      `)
-      .join('\n');
+    const narrativeContent = generateNarrativeSummary(newsletter.tweetContent);
+    processedContent = processedContent.replace(/{{tweets}}/g, narrativeContent);
   } else {
     console.log('No tweets found in newsletter');
-    tweetSection = `
+    processedContent = processedContent.replace(/{{tweets}}/g, `
       <div class="no-tweets-message">
         <p>No tweets available. Click "Fetch Tweets" to load content.</p>
       </div>
-    `;
+    `);
   }
-
-  // Replace tweets placeholder
-  processedContent = processedContent.replace(/{{tweets}}/g, tweetSection);
 
   const finalContent = styles + processedContent;
   console.log('Final content length:', finalContent.length);
@@ -212,7 +224,7 @@ export default function Preview() {
                   Back
                 </Button>
                 <Button
-                  onClick={() => fetchTweetsMutation.mutate({})} //Added default empty object
+                  onClick={() => fetchTweetsMutation.mutate({})}
                   disabled={fetchTweetsMutation.isPending}
                 >
                   {fetchTweetsMutation.isPending && (
@@ -226,7 +238,7 @@ export default function Preview() {
 
           <Card>
             <CardContent className="p-6">
-              <div 
+              <div
                 className="preview-content prose max-w-none"
                 dangerouslySetInnerHTML={{ __html: finalContent }}
               />

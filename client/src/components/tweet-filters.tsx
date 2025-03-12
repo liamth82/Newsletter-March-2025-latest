@@ -2,6 +2,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
+import { NewsOutletsManager } from "./news-outlets-manager";
 import { useState } from "react";
 
 interface TweetFilters {
@@ -10,6 +11,7 @@ interface TweetFilters {
   excludeReplies: boolean;
   excludeRetweets: boolean;
   safeMode: boolean;
+  newsOutlets: string[];
 }
 
 interface TweetFiltersProps {
@@ -23,9 +25,10 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
     excludeReplies: false,
     excludeRetweets: false,
     safeMode: true,
+    newsOutlets: [],
   });
 
-  const handleFilterChange = (key: keyof TweetFilters, value: boolean | number) => {
+  const handleFilterChange = (key: keyof TweetFilters, value: any) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     onFiltersChange(newFilters);
@@ -34,6 +37,14 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
   return (
     <Card>
       <CardContent className="space-y-4 p-4">
+        <div>
+          <Label className="text-base font-semibold">News Outlets</Label>
+          <NewsOutletsManager
+            value={filters.newsOutlets}
+            onChange={(value) => handleFilterChange('newsOutlets', value)}
+          />
+        </div>
+
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="verified-only">Verified accounts only</Label>
@@ -68,6 +79,7 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
             />
           </div>
         </div>
+
         <div className="space-y-2">
           <Label>Minimum followers: {filters.minFollowers.toLocaleString()}</Label>
           <Slider
