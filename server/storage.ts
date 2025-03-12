@@ -82,12 +82,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createNewsletter(newsletter: Omit<Newsletter, "id" | "createdAt" | "tweetContent">): Promise<Newsletter> {
-    const [newNewsletter] = await db.insert(newsletters).values({
-      ...newsletter,
-      createdAt: new Date(),
-      tweetContent: []
-    }).returning();
-    return newNewsletter;
+    try {
+      // Ensure arrays are properly initialized
+      const payload = {
+        ...newsletter,
+        createdAt: new Date(),
+        tweetContent: [], // Initialize as empty array
+        keywords: Array.isArray(newsletter.keywords) ? newsletter.keywords : [], // Ensure keywords is an array
+        tweetFilters: {
+          ...newsletter.tweetFilters,
+          newsOutlets: Array.isArray(newsletter.tweetFilters?.newsOutlets)
+            ? newsletter.tweetFilters.newsOutlets
+            : []
+        }
+      };
+
+      const [newNewsletter] = await db
+        .insert(newsletters)
+        .values(payload)
+        .returning();
+
+      return newNewsletter;
+    } catch (error) {
+      console.error('Error creating newsletter:', error);
+      throw new Error('Failed to create newsletter');
+    }
   }
 
   async getNewsletters(userId: number): Promise<Newsletter[]> {

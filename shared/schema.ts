@@ -31,12 +31,11 @@ export const newsletters = pgTable("newsletters", {
   keywords: text("keywords").array().notNull(),
   scheduleTime: timestamp("schedule_time"),
   status: text("status").notNull().default('draft'),
-  tweetContent: json("tweet_content").array(),
+  tweetContent: json("tweet_content").$type<any[]>().array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   sentAt: timestamp("sent_at"),
   totalRecipients: integer("total_recipients").default(0),
   deliveryStatus: text("delivery_status").default('pending'),
-  // Add new fields for filters and settings
   tweetFilters: json("tweet_filters").default({
     verifiedOnly: false,
     minFollowers: 0,
