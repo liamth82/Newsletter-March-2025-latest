@@ -86,66 +86,25 @@ export default function Preview() {
   console.log('Current newsletter state:', newsletter);
   console.log('Current template state:', template);
 
-  // Add base styling
-  const baseStyles = `
-    <style>
-      .tweet {
-        border: 1px solid hsl(var(--border));
-        transition: all 0.2s ease-in-out;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        background-color: hsl(var(--card));
-        border-radius: 0.5rem;
-      }
-      .tweet:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      }
-      .tweet-content {
-        word-break: break-word;
-      }
-      .tweet-metadata {
-        border-top: 1px solid hsl(var(--border));
-        padding-top: 0.5rem;
-        margin-top: 0.5rem;
-        color: hsl(var(--muted-foreground));
-      }
-      .newsletter-section {
-        margin-bottom: 2rem;
-      }
-    </style>
-  `;
-
-  // Add custom template styles
-  const templateStyles = Object.entries(template.styles || {})
-    .map(([selector, styles]) => {
-      const styleRules = Object.entries(styles as Record<string, string>)
-        .map(([prop, value]) => `${prop}: ${value};`)
-        .join(" ");
-      return `${selector} { ${styleRules} }`;
-    })
-    .join("\n");
-
-  // Start with base template content
-  let processedContent = template.content || '';
+  // Generate the preview content
+  let finalContent = template.content;
+  console.log('Starting template content:', finalContent);
 
   // Replace newsletter title
-  processedContent = processedContent.replace(
-    /{{newsletter_title}}/g, 
-    newsletter.title || 'Newsletter'
-  );
+  const title = "Newsletter Preview";
+  finalContent = finalContent.replace(/{{newsletter_title}}/g, title);
+  console.log('After title replacement:', finalContent);
 
-  // Process tweet content
-  let tweetContent = '<div class="p-4 border rounded bg-muted"><p class="text-muted-foreground">No tweets available</p></div>';
-
+  // Process tweets
+  let tweetSection = '';
   if (Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0) {
-    console.log('Processing tweets:', newsletter.tweetContent);
-    tweetContent = newsletter.tweetContent
-      .map((tweet: any) => `
+    console.log('Processing tweets:', newsletter.tweetContent.length, 'tweets found');
+    tweetSection = newsletter.tweetContent
+      .map(tweet => `
         <div class="tweet">
           <div class="tweet-content">
-            <p class="text-base">${tweet.text}</p>
-            <div class="tweet-metadata flex items-center gap-2 text-sm">
+            <p>${tweet.text}</p>
+            <div class="tweet-metadata">
               <span>${new Date(tweet.created_at).toLocaleString()}</span>
               ${tweet.metrics ? `
                 <span>•</span>
@@ -157,31 +116,53 @@ export default function Preview() {
           </div>
         </div>
       `)
-      .join("\n");
+      .join('');
+  } else {
+    console.log('No tweets found in newsletter');
+    tweetSection = `
+      <div class="no-tweets-message">
+        <p>No tweets available. Click "Fetch Tweets" to load content.</p>
+      </div>
+    `;
   }
 
-  // Replace tweet placeholder with actual content
-  processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
+  // Replace tweets placeholder
+  finalContent = finalContent.replace(/{{tweets}}/g, tweetSection);
+  console.log('After tweet replacement:', finalContent);
 
-  // Handle logos if present
-  if (template.logos && template.logos.length > 0) {
-    const logoHtml = template.logos
-      .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
-      .join("");
-    processedContent = processedContent.replace(
-      /{{#each logos}}.*?{{\/each}}/s,
-      logoHtml
-    );
-  }
-
-  // Combine all styles and content
-  const finalContent = `
-    ${baseStyles}
-    <style>${templateStyles}</style>
-    ${processedContent}
+  // Add styling
+  const styles = `
+    <style>
+      .tweet {
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        background-color: white;
+      }
+      .tweet-content p {
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+      }
+      .tweet-metadata {
+        color: #64748b;
+        font-size: 0.875rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .no-tweets-message {
+        padding: 2rem;
+        text-align: center;
+        background-color: #f8fafc;
+        border-radius: 0.5rem;
+        color: #64748b;
+      }
+    </style>
   `;
 
-  console.log('Final processed content:', finalContent);
+  finalContent = styles + finalContent;
+  console.log('Final content length:', finalContent.length);
 
   return (
     <div className="flex min-h-screen">
@@ -191,8 +172,10 @@ export default function Preview() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             <div className="space-x-2">
-              <Button variant="outline" onClick={() => window.history.back()}>Back</Button>
-              <Button 
+              <Button variant="outline" onClick={() => window.history.back()}>
+                Back
+              </Button>
+              <Button
                 onClick={() => fetchTweetsMutation.mutate()}
                 disabled={fetchTweetsMutation.isPending}
               >
@@ -201,15 +184,15 @@ export default function Preview() {
                 )}
                 Fetch Tweets
               </Button>
-              <Button>Schedule</Button>
             </div>
           </div>
 
           <Card>
             <CardContent className="p-6">
-              <div className="prose prose-lg max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: finalContent }} />
-              </div>
+              <div 
+                className="preview-content prose max-w-none"
+                dangerouslySetInnerHTML={{ __html: finalContent }}
+              />
             </CardContent>
           </Card>
         </div>
