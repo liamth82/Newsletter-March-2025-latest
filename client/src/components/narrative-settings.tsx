@@ -24,10 +24,11 @@ const defaultSettings: NarrativeSettings = {
 
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
   const handleChange = (key: keyof NarrativeSettings, value: any) => {
-    onChange({
+    const newSettings = {
       ...settings,
-      [key]: value
-    });
+      [key]: key === 'wordCount' || key === 'paragraphCount' ? Number(value) : value
+    };
+    onChange(newSettings);
   };
 
   return (

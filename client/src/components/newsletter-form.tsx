@@ -14,6 +14,7 @@ import { useState } from "react";
 import { Newsletter, Template } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
 
 interface NewsletterFormProps {
   onSuccess: () => void;
@@ -21,9 +22,9 @@ interface NewsletterFormProps {
 }
 
 const defaultNarrativeSettings = {
-  style: 'professional',
+  style: 'professional' as const,
   wordCount: 300,
-  tone: 'formal',
+  tone: 'formal' as const,
   paragraphCount: 6
 };
 
@@ -57,13 +58,22 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     mutationFn: async (data: any) => {
       console.log('Submitting newsletter data:', data);
       try {
+        const formattedData = {
+          ...data,
+          narrativeSettings: {
+            style: data.narrativeSettings.style,
+            wordCount: Number(data.narrativeSettings.wordCount),
+            tone: data.narrativeSettings.tone,
+            paragraphCount: Number(data.narrativeSettings.paragraphCount)
+          }
+        };
+
         const res = await apiRequest(
           newsletter ? "PATCH" : "POST",
           newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters",
-          data
+          formattedData
         );
 
-        // Check if response is OK
         if (!res.ok) {
           const contentType = res.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
@@ -208,6 +218,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             Schedule
           </Button>
           <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {newsletter ? 'Update' : 'Create'} Newsletter
           </Button>
         </div>
