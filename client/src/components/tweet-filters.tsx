@@ -2,8 +2,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewsOutletsManager } from "./news-outlets-manager";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Sector } from "@shared/schema";
 
 interface TweetFilters {
   verifiedOnly: boolean;
@@ -28,10 +32,23 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
     newsOutlets: [],
   });
 
+  const { data: sectors = [] } = useQuery<Sector[]>({
+    queryKey: ["/api/sectors"],
+  });
+
   const handleFilterChange = (key: keyof TweetFilters, value: any) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     onFiltersChange(newFilters);
+  };
+
+  const handleImportSector = (sectorId: string) => {
+    const sector = sectors.find(s => s.id === parseInt(sectorId));
+    if (sector) {
+      // Merge existing handles with sector handles, removing duplicates
+      const uniqueHandles = [...new Set([...filters.newsOutlets, ...sector.handles])];
+      handleFilterChange('newsOutlets', uniqueHandles);
+    }
   };
 
   return (
@@ -48,6 +65,22 @@ export function TweetFilters({ onFiltersChange }: TweetFiltersProps) {
           <div className="text-sm text-muted-foreground mb-2">
             Add Twitter handles of trusted news outlets (e.g. Reuters, AP, BBCNews) to only receive content from these sources
           </div>
+          {sectors.length > 0 && (
+            <div className="flex gap-2 mb-4">
+              <Select onValueChange={handleImportSector}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Import from sector..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.map((sector) => (
+                    <SelectItem key={sector.id} value={sector.id.toString()}>
+                      {sector.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <NewsOutletsManager
             value={filters.newsOutlets}
             onChange={(value) => handleFilterChange('newsOutlets', value)}

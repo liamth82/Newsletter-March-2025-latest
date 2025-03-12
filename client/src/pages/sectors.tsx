@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { NewsOutletsManager } from "@/components/news-outlets-manager";
 import { Sector } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SidebarNav } from "@/components/sidebar-nav";
 
 export default function SectorsPage() {
   const { toast } = useToast();
@@ -113,7 +114,7 @@ export default function SectorsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const data = { name, description, handles };
-    
+
     if (editingSector) {
       updateMutation.mutate({ id: editingSector.id, data });
     } else {
@@ -126,111 +127,114 @@ export default function SectorsPage() {
   }
 
   return (
-    <div className="container py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Sectors</h1>
-        <Button onClick={() => setIsOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Sector
-        </Button>
-      </div>
+    <div className="flex min-h-screen">
+      <SidebarNav />
+      <div className="flex-1 container py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Sectors</h1>
+          <Button onClick={() => setIsOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Sector
+          </Button>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sectors.map((sector) => (
-          <Card key={sector.id}>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>{sector.name}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(sector)}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteMutation.mutate(sector.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sectors.map((sector) => (
+            <Card key={sector.id}>
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <span>{sector.name}</span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(sector)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteMutation.mutate(sector.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {sector.description}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {sector.handles.map((handle) => (
+                    <span
+                      key={handle}
+                      className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                    >
+                      @{handle}
+                    </span>
+                  ))}
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {sector.description}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {sector.handles.map((handle) => (
-                  <span
-                    key={handle}
-                    className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
-                  >
-                    @{handle}
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingSector ? "Edit Sector" : "Create New Sector"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter sector name"
-                />
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingSector ? "Edit Sector" : "Create New Sector"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter sector name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter sector description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Twitter Handles</Label>
+                  <NewsOutletsManager
+                    value={handles}
+                    onChange={setHandles}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter sector description"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Twitter Handles</Label>
-                <NewsOutletsManager
-                  value={handles}
-                  onChange={setHandles}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsOpen(false);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editingSector ? "Update" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsOpen(false);
+                    resetForm();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingSector ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }
