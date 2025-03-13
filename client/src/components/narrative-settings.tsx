@@ -2,22 +2,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { narrativeSettingsSchema, type NarrativeSettings } from "@shared/schema";
+import { type NarrativeSettings } from "@shared/schema";
 
-interface NarrativeSettingsProps {
-  settings?: NarrativeSettings;
+interface NarrativeSettingsPanelProps {
+  settings: NarrativeSettings;
   onChange: (settings: NarrativeSettings) => void;
 }
 
 const defaultSettings: NarrativeSettings = {
-  style: 'professional',
+  style: "professional",
   wordCount: 300,
-  tone: 'formal',
+  tone: "formal",
   paragraphCount: 6
 };
 
-export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
-  const safeSettings = narrativeSettingsSchema.parse({ ...defaultSettings, ...settings });
+export function NarrativeSettingsPanel({ settings = defaultSettings, onChange }: NarrativeSettingsPanelProps) {
+  const currentSettings = { ...defaultSettings, ...settings };
 
   return (
     <Card>
@@ -25,13 +25,10 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         <div className="space-y-2">
           <Label>Writing Style</Label>
           <Select
-            value={safeSettings.style}
-            onValueChange={(value) => {
-              onChange({
-                ...safeSettings,
-                style: value as NarrativeSettings['style']
-              });
-            }}
+            value={currentSettings.style}
+            onValueChange={(value) => 
+              onChange({ ...currentSettings, style: value as NarrativeSettings['style'] })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -47,13 +44,10 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         <div className="space-y-2">
           <Label>Tone</Label>
           <Select
-            value={safeSettings.tone}
-            onValueChange={(value) => {
-              onChange({
-                ...safeSettings,
-                tone: value as NarrativeSettings['tone']
-              });
-            }}
+            value={currentSettings.tone}
+            onValueChange={(value) => 
+              onChange({ ...currentSettings, tone: value as NarrativeSettings['tone'] })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
@@ -66,15 +60,12 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         </div>
 
         <div className="space-y-2">
-          <Label>Target Word Count: {safeSettings.wordCount}</Label>
+          <Label>Target Word Count: {currentSettings.wordCount}</Label>
           <Slider
-            value={[safeSettings.wordCount]}
-            onValueChange={(value) => {
-              onChange({
-                ...safeSettings,
-                wordCount: value[0]
-              });
-            }}
+            value={[currentSettings.wordCount]}
+            onValueChange={(value) => 
+              onChange({ ...currentSettings, wordCount: value[0] })
+            }
             min={100}
             max={1000}
             step={50}
@@ -86,15 +77,12 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
         </div>
 
         <div className="space-y-2">
-          <Label>Number of Paragraphs: {safeSettings.paragraphCount}</Label>
+          <Label>Number of Paragraphs: {currentSettings.paragraphCount}</Label>
           <Slider
-            value={[safeSettings.paragraphCount]}
-            onValueChange={(value) => {
-              onChange({
-                ...safeSettings,
-                paragraphCount: value[0]
-              });
-            }}
+            value={[currentSettings.paragraphCount]}
+            onValueChange={(value) => 
+              onChange({ ...currentSettings, paragraphCount: value[0] })
+            }
             min={1}
             max={10}
             step={1}

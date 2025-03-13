@@ -1,17 +1,16 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema, narrativeSettingsSchema } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
-import { NarrativeSettings } from "./narrative-settings";
+import { NarrativeSettingsPanel } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
-import { Newsletter, Template, NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -22,10 +21,10 @@ interface NewsletterFormProps {
 }
 
 const defaultNarrativeSettings: NarrativeSettingsType = {
-  style: 'professional',
+  style: "professional",
   wordCount: 300,
-  tone: 'formal',
-  paragraphCount: 6
+  tone: "formal",
+  paragraphCount: 6,
 };
 
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
@@ -50,43 +49,37 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: true,
         newsOutlets: []
       },
-      narrativeSettings: narrativeSettingsSchema.parse({
-        ...defaultNarrativeSettings,
-        ...(newsletter?.narrativeSettings || {})
-      })
-    }
+      narrativeSettings: newsletter?.narrativeSettings || defaultNarrativeSettings
+    },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      try {
-        const method = newsletter ? "PATCH" : "POST";
-        const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
+      const method = newsletter ? "PATCH" : "POST";
+      const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
-        const payload = {
-          templateId: Number(data.templateId),
-          keywords: Array.isArray(data.keywords) ? data.keywords : [],
-          scheduleTime: data.scheduleTime,
-          tweetFilters: {
-            verifiedOnly: Boolean(data.tweetFilters?.verifiedOnly),
-            minFollowers: Number(data.tweetFilters?.minFollowers || 0),
-            excludeReplies: Boolean(data.tweetFilters?.excludeReplies),
-            excludeRetweets: Boolean(data.tweetFilters?.excludeRetweets),
-            safeMode: Boolean(data.tweetFilters?.safeMode),
-            newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
-          },
-          narrativeSettings: narrativeSettingsSchema.parse(data.narrativeSettings)
-        };
-
-        const res = await apiRequest(method, url, payload);
-        if (!res.ok) {
-          throw new Error('Failed to save newsletter');
+      const res = await apiRequest(method, url, {
+        templateId: Number(data.templateId),
+        keywords: Array.isArray(data.keywords) ? data.keywords : [],
+        scheduleTime: data.scheduleTime,
+        tweetFilters: {
+          verifiedOnly: Boolean(data.tweetFilters?.verifiedOnly),
+          minFollowers: Number(data.tweetFilters?.minFollowers || 0),
+          excludeReplies: Boolean(data.tweetFilters?.excludeReplies),
+          excludeRetweets: Boolean(data.tweetFilters?.excludeRetweets),
+          safeMode: Boolean(data.tweetFilters?.safeMode),
+          newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
+        },
+        narrativeSettings: {
+          ...defaultNarrativeSettings,
+          ...data.narrativeSettings
         }
-        return await res.json();
-      } catch (error: any) {
-        console.error('Newsletter mutation error:', error);
-        throw error;
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save newsletter");
       }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
@@ -105,11 +98,9 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     },
   });
 
-  const onSubmit = form.handleSubmit((data) => createMutation.mutate(data));
-
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
         <Tabs defaultValue="content" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="content">Content</TabsTrigger>
@@ -172,14 +163,9 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                 <FormItem>
                   <FormLabel>Narrative Style</FormLabel>
                   <FormControl>
-                    <NarrativeSettings
+                    <NarrativeSettingsPanel
                       settings={field.value}
-                      onChange={(settings) => {
-                        field.onChange({
-                          ...defaultNarrativeSettings,
-                          ...settings
-                        });
-                      }}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

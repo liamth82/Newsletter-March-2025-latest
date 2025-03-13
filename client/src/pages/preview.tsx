@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Newsletter, Template, TweetFilters, NarrativeSettings } from "@shared/schema";
+import { type Newsletter, type Template, type NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -217,7 +217,7 @@ export default function Preview() {
 }
 
 // Helper function to generate narrative content from tweets
-function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
+function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType) {
   if (!tweets || tweets.length === 0) {
     return '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
   }
@@ -235,7 +235,7 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
     }))
     .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  const transitions: Record<NarrativeSettings['style'], string[]> = {
+  const transitions: Record<NarrativeSettingsType['style'], string[]> = {
     professional: [
       "Furthermore, %author% indicates that",
       "According to %author%'s analysis,",
@@ -256,19 +256,19 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
     ]
   };
 
-  const openings: Record<NarrativeSettings['style'], string> = {
+  const openings: Record<NarrativeSettingsType['style'], string> = {
     professional: "In recent developments, %author% reports that",
     casual: "Here's what's new: %author% tells us that",
     storytelling: "Our story begins as %author% reveals that"
   };
 
-  const conclusions: Record<NarrativeSettings['style'], string> = {
+  const conclusions: Record<NarrativeSettingsType['style'], string> = {
     professional: "Finally, %author% concludes that",
     casual: "To wrap things up, %author% adds that",
     storytelling: "The story concludes as %author% shares that"
   };
 
-  const getTransition = (style: NarrativeSettings['style'], index: number) => {
+  const getTransition = (style: NarrativeSettingsType['style'], index: number) => {
     return transitions[style][index % transitions[style].length];
   };
 
