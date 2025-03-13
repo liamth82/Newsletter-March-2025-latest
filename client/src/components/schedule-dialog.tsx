@@ -28,7 +28,7 @@ export function ScheduleDialog({
         <DialogHeader>
           <DialogTitle>Schedule Newsletter</DialogTitle>
           <DialogDescription>
-            Choose a date to schedule your newsletter for delivery.
+            Select a date when you want your newsletter to be sent.
           </DialogDescription>
         </DialogHeader>
 
@@ -52,7 +52,7 @@ export function ScheduleDialog({
             onClick={() => date && onSchedule(date)}
             disabled={!date}
           >
-            Confirm
+            Confirm Schedule
           </Button>
         </div>
       </DialogContent>
