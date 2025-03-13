@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,7 +34,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     defaultValues: {
       templateId: newsletter?.templateId || undefined,
       keywords: newsletter?.keywords || [],
-      scheduleTime: newsletter?.scheduleTime,
+      scheduleTime: newsletter?.scheduleTime || undefined,
       tweetFilters: {
         verifiedOnly: newsletter?.tweetFilters?.verifiedOnly || false,
         minFollowers: newsletter?.tweetFilters?.minFollowers || 0,
@@ -53,13 +53,13 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: any) => {
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
-      const res = await apiRequest(method, url, {
-        templateId: Number(data.templateId),
-        keywords: Array.isArray(data.keywords) ? data.keywords : [],
+      const payload = {
+        templateId: parseInt(data.templateId),
+        keywords: data.keywords || [],
         scheduleTime: data.scheduleTime,
         tweetFilters: {
           verifiedOnly: Boolean(data.tweetFilters?.verifiedOnly),
@@ -67,11 +67,12 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           excludeReplies: Boolean(data.tweetFilters?.excludeReplies),
           excludeRetweets: Boolean(data.tweetFilters?.excludeRetweets),
           safeMode: Boolean(data.tweetFilters?.safeMode),
-          newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
+          newsOutlets: data.tweetFilters?.newsOutlets || []
         },
         narrativeSettings: data.narrativeSettings
-      });
+      };
 
+      const res = await apiRequest(method, url, payload);
       if (!res.ok) {
         throw new Error("Failed to save newsletter");
       }

@@ -4,35 +4,46 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { type NarrativeSettings } from "@shared/schema";
 
-const defaultNarrativeSettings: NarrativeSettings = {
-  style: "professional",
-  wordCount: 300,
-  tone: "formal",
-  paragraphCount: 6
-};
-
 interface Props {
   value?: NarrativeSettings;
   onChange: (value: NarrativeSettings) => void;
 }
 
-export function NarrativeSettingsControl({ value = defaultNarrativeSettings, onChange }: Props) {
-  const settings = { ...defaultNarrativeSettings, ...value };
+export function NarrativeSettingsControl({ value, onChange }: Props) {
+  // Ensure we have valid default values
+  const settings: NarrativeSettings = value || {
+    style: "professional",
+    wordCount: 300,
+    tone: "formal",
+    paragraphCount: 6
+  };
 
   const handleStyleChange = (newStyle: NarrativeSettings['style']) => {
-    onChange({ ...settings, style: newStyle });
+    onChange({
+      ...settings,
+      style: newStyle
+    });
   };
 
   const handleToneChange = (newTone: NarrativeSettings['tone']) => {
-    onChange({ ...settings, tone: newTone });
+    onChange({
+      ...settings,
+      tone: newTone
+    });
   };
 
   const handleWordCountChange = (values: number[]) => {
-    onChange({ ...settings, wordCount: values[0] });
+    onChange({
+      ...settings,
+      wordCount: values[0]
+    });
   };
 
   const handleParagraphCountChange = (values: number[]) => {
-    onChange({ ...settings, paragraphCount: values[0] });
+    onChange({
+      ...settings,
+      paragraphCount: values[0]
+    });
   };
 
   return (
