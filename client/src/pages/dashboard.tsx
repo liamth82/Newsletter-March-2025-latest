@@ -34,15 +34,13 @@ export default function Dashboard() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Newsletter
+                {editingNewsletter ? "Edit Newsletter" : "Create Newsletter"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <NewsletterForm 
-                onSuccess={handleEditComplete}
-                newsletter={editingNewsletter}
-              />
-            </DialogContent>
+            <NewsletterForm 
+              onSuccess={handleEditComplete}
+              newsletter={editingNewsletter}
+            />
           </Dialog>
         </div>
 

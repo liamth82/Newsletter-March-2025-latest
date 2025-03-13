@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
@@ -21,11 +21,11 @@ interface NewsletterFormProps {
   newsletter?: Newsletter | null;
 }
 
-const defaultNarrativeSettings: NarrativeSettings = {
-  style: "professional",
+const defaultNarrativeSettings = {
+  style: "professional" as const,
   wordCount: 300,
-  tone: "formal",
-  paragraphCount: 6
+  tone: "formal" as const,
+  paragraphCount: 6,
 };
 
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
@@ -58,7 +58,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
