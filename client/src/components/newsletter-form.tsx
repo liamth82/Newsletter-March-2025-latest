@@ -55,28 +55,26 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (formData: any) => {
+    mutationFn: async (data: any) => {
       try {
         const method = newsletter ? "PATCH" : "POST";
         const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
         const payload = {
-          templateId: Number(formData.templateId),
-          keywords: Array.isArray(formData.keywords) ? formData.keywords : [],
-          scheduleTime: formData.scheduleTime,
+          templateId: Number(data.templateId),
+          keywords: Array.isArray(data.keywords) ? data.keywords : [],
+          scheduleTime: data.scheduleTime,
           tweetFilters: {
-            verifiedOnly: Boolean(formData.tweetFilters?.verifiedOnly),
-            minFollowers: Number(formData.tweetFilters?.minFollowers || 0),
-            excludeReplies: Boolean(formData.tweetFilters?.excludeReplies),
-            excludeRetweets: Boolean(formData.tweetFilters?.excludeRetweets),
-            safeMode: Boolean(formData.tweetFilters?.safeMode),
-            newsOutlets: Array.isArray(formData.tweetFilters?.newsOutlets) ? formData.tweetFilters.newsOutlets : []
+            verifiedOnly: Boolean(data.tweetFilters?.verifiedOnly),
+            minFollowers: Number(data.tweetFilters?.minFollowers || 0),
+            excludeReplies: Boolean(data.tweetFilters?.excludeReplies),
+            excludeRetweets: Boolean(data.tweetFilters?.excludeRetweets),
+            safeMode: Boolean(data.tweetFilters?.safeMode),
+            newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
           },
           narrativeSettings: {
-            style: String(formData.narrativeSettings?.style || defaultNarrativeSettings.style),
-            wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
-            tone: String(formData.narrativeSettings?.tone || defaultNarrativeSettings.tone),
-            paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
+            ...defaultNarrativeSettings,
+            ...data.narrativeSettings
           }
         };
 
@@ -85,7 +83,6 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           const errorData = await res.json();
           throw new Error(errorData.message || 'Failed to save newsletter');
         }
-
         return await res.json();
       } catch (error: any) {
         console.error('Newsletter mutation error:', error);
@@ -178,12 +175,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                   <FormControl>
                     <NarrativeSettings
                       settings={field.value}
-                      onChange={(newSettings) => {
-                        field.onChange({
-                          ...defaultNarrativeSettings,
-                          ...newSettings
-                        });
-                      }}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

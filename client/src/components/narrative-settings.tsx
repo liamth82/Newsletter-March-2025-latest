@@ -16,33 +16,42 @@ const defaultSettings: NarrativeSettingsType = {
   paragraphCount: 6
 };
 
+const styles = ['professional', 'casual', 'storytelling'] as const;
+const tones = ['formal', 'conversational'] as const;
+
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
-  // Use safe settings that always include defaults
   const safeSettings = { ...defaultSettings, ...settings };
 
-  const handleChange = (key: keyof NarrativeSettingsType, value: any) => {
-    const newSettings = { ...safeSettings };
-
-    switch (key) {
-      case 'style':
-        if (['professional', 'casual', 'storytelling'].includes(value)) {
-          newSettings.style = value as NarrativeSettingsType['style'];
-        }
-        break;
-      case 'tone':
-        if (['formal', 'conversational'].includes(value)) {
-          newSettings.tone = value as NarrativeSettingsType['tone'];
-        }
-        break;
-      case 'wordCount':
-        newSettings.wordCount = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
-        break;
-      case 'paragraphCount':
-        newSettings.paragraphCount = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
-        break;
+  const handleStyleChange = (value: string) => {
+    if (styles.includes(value as NarrativeSettingsType['style'])) {
+      onChange({
+        ...safeSettings,
+        style: value as NarrativeSettingsType['style']
+      });
     }
+  };
 
-    onChange(newSettings);
+  const handleToneChange = (value: string) => {
+    if (tones.includes(value as NarrativeSettingsType['tone'])) {
+      onChange({
+        ...safeSettings,
+        tone: value as NarrativeSettingsType['tone']
+      });
+    }
+  };
+
+  const handleWordCountChange = (value: number[]) => {
+    onChange({
+      ...safeSettings,
+      wordCount: Math.max(100, Math.min(1000, value[0]))
+    });
+  };
+
+  const handleParagraphCountChange = (value: number[]) => {
+    onChange({
+      ...safeSettings,
+      paragraphCount: Math.max(1, Math.min(10, value[0]))
+    });
   };
 
   return (
@@ -52,7 +61,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Writing Style</Label>
           <Select
             value={safeSettings.style}
-            onValueChange={(value) => handleChange('style', value)}
+            onValueChange={handleStyleChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -69,7 +78,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Tone</Label>
           <Select
             value={safeSettings.tone}
-            onValueChange={(value) => handleChange('tone', value)}
+            onValueChange={handleToneChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
@@ -85,7 +94,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Target Word Count: {safeSettings.wordCount}</Label>
           <Slider
             value={[safeSettings.wordCount]}
-            onValueChange={(value) => handleChange('wordCount', value[0])}
+            onValueChange={handleWordCountChange}
             min={100}
             max={1000}
             step={50}
@@ -100,7 +109,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Number of Paragraphs: {safeSettings.paragraphCount}</Label>
           <Slider
             value={[safeSettings.paragraphCount]}
-            onValueChange={(value) => handleChange('paragraphCount', value[0])}
+            onValueChange={handleParagraphCountChange}
             min={1}
             max={10}
             step={1}
