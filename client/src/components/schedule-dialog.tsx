@@ -2,6 +2,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -26,8 +27,11 @@ export function ScheduleDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Schedule Newsletter</DialogTitle>
+          <DialogDescription>
+            Choose a date to schedule your newsletter for delivery.
+          </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           <Calendar
             mode="single"
