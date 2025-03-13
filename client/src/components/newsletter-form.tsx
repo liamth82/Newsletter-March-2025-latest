@@ -73,24 +73,17 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             newsOutlets: Array.isArray(formData.tweetFilters?.newsOutlets) ? formData.tweetFilters.newsOutlets : []
           },
           narrativeSettings: {
-            style: formData.narrativeSettings?.style || defaultNarrativeSettings.style,
+            style: String(formData.narrativeSettings?.style || defaultNarrativeSettings.style),
             wordCount: Number(formData.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
-            tone: formData.narrativeSettings?.tone || defaultNarrativeSettings.tone,
+            tone: String(formData.narrativeSettings?.tone || defaultNarrativeSettings.tone),
             paragraphCount: Number(formData.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
           }
         };
 
         const res = await apiRequest(method, url, payload);
-
         if (!res.ok) {
-          let errorMessage = 'Failed to save newsletter';
-          try {
-            const errorData = await res.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (e) {
-            console.error('Error parsing error response:', e);
-          }
-          throw new Error(errorMessage);
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to save newsletter');
         }
 
         return await res.json();

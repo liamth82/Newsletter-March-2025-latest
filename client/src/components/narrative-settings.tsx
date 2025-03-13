@@ -21,13 +21,25 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
   const safeSettings = { ...defaultSettings, ...settings };
 
   const handleChange = (key: keyof NarrativeSettingsType, value: any) => {
-    const newSettings = { ...safeSettings, [key]: value };
+    const newSettings = { ...safeSettings };
 
-    // Validate and normalize numeric values
-    if (key === 'wordCount') {
-      newSettings.wordCount = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
-    } else if (key === 'paragraphCount') {
-      newSettings.paragraphCount = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
+    switch (key) {
+      case 'style':
+        if (['professional', 'casual', 'storytelling'].includes(value)) {
+          newSettings.style = value as NarrativeSettingsType['style'];
+        }
+        break;
+      case 'tone':
+        if (['formal', 'conversational'].includes(value)) {
+          newSettings.tone = value as NarrativeSettingsType['tone'];
+        }
+        break;
+      case 'wordCount':
+        newSettings.wordCount = Math.max(100, Math.min(1000, Number(value) || defaultSettings.wordCount));
+        break;
+      case 'paragraphCount':
+        newSettings.paragraphCount = Math.max(1, Math.min(10, Number(value) || defaultSettings.paragraphCount));
+        break;
     }
 
     onChange(newSettings);
@@ -40,7 +52,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Writing Style</Label>
           <Select
             value={safeSettings.style}
-            onValueChange={(value: NarrativeSettingsType['style']) => handleChange('style', value)}
+            onValueChange={(value) => handleChange('style', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -57,7 +69,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Tone</Label>
           <Select
             value={safeSettings.tone}
-            onValueChange={(value: NarrativeSettingsType['tone']) => handleChange('tone', value)}
+            onValueChange={(value) => handleChange('tone', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />

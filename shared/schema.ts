@@ -128,6 +128,11 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
     wordCount: z.number().min(100).max(1000),
     tone: z.enum(['formal', 'conversational']),
     paragraphCount: z.number().min(1).max(10)
+  }).default({
+    style: 'professional',
+    wordCount: 300,
+    tone: 'formal',
+    paragraphCount: 6
   })
 });
 
