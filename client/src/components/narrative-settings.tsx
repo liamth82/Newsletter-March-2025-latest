@@ -17,27 +17,8 @@ const defaultSettings: NarrativeSettingsType = {
 };
 
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
+  // Ensure we always have valid settings by merging with defaults
   const safeSettings = { ...defaultSettings, ...settings };
-
-  const handleStyleChange = (value: string) => {
-    const validStyles = ['professional', 'casual', 'storytelling'] as const;
-    if (validStyles.includes(value as NarrativeSettingsType['style'])) {
-      onChange({
-        ...safeSettings,
-        style: value as NarrativeSettingsType['style']
-      });
-    }
-  };
-
-  const handleToneChange = (value: string) => {
-    const validTones = ['formal', 'conversational'] as const;
-    if (validTones.includes(value as NarrativeSettingsType['tone'])) {
-      onChange({
-        ...safeSettings,
-        tone: value as NarrativeSettingsType['tone']
-      });
-    }
-  };
 
   return (
     <Card>
@@ -46,7 +27,12 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Writing Style</Label>
           <Select
             value={safeSettings.style}
-            onValueChange={handleStyleChange}
+            onValueChange={(value: 'professional' | 'casual' | 'storytelling') => {
+              onChange({
+                ...safeSettings,
+                style: value
+              });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -63,7 +49,12 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Tone</Label>
           <Select
             value={safeSettings.tone}
-            onValueChange={handleToneChange}
+            onValueChange={(value: 'formal' | 'conversational') => {
+              onChange({
+                ...safeSettings,
+                tone: value
+              });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
