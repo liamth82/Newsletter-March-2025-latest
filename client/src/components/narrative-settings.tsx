@@ -17,9 +17,11 @@ const defaultSettings: NarrativeSettingsType = {
 };
 
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
+  // Use safe settings that always include defaults
+  const safeSettings = { ...defaultSettings, ...settings };
+
   const handleChange = (key: keyof NarrativeSettingsType, value: any) => {
-    const currentSettings = { ...defaultSettings, ...settings };
-    const newSettings = { ...currentSettings, [key]: value };
+    const newSettings = { ...safeSettings, [key]: value };
 
     // Validate and normalize numeric values
     if (key === 'wordCount') {
@@ -30,9 +32,6 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
 
     onChange(newSettings);
   };
-
-  // Use safe settings that always include defaults
-  const safeSettings = { ...defaultSettings, ...settings };
 
   return (
     <Card>
