@@ -93,8 +93,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           throw new Error(errorMessage);
         }
 
-        const responseData = await res.json();
-        return responseData;
+        return await res.json();
       } catch (error: any) {
         console.error('Newsletter mutation error:', error);
         throw new Error(error.message || 'Failed to save newsletter');

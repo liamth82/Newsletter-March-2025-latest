@@ -40,7 +40,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Writing Style</Label>
           <Select
             value={safeSettings.style}
-            onValueChange={(value) => handleChange('style', value)}
+            onValueChange={(value: NarrativeSettingsType['style']) => handleChange('style', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -57,7 +57,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Tone</Label>
           <Select
             value={safeSettings.tone}
-            onValueChange={(value) => handleChange('tone', value)}
+            onValueChange={(value: NarrativeSettingsType['tone']) => handleChange('tone', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
