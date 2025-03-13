@@ -2,25 +2,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
+import { narrativeSettingsSchema, type NarrativeSettings } from "@shared/schema";
 
 interface NarrativeSettingsProps {
-  settings?: NarrativeSettingsType;
-  onChange: (settings: NarrativeSettingsType) => void;
+  settings?: NarrativeSettings;
+  onChange: (settings: NarrativeSettings) => void;
 }
 
-const defaultSettings: NarrativeSettingsType = {
+const defaultSettings: NarrativeSettings = {
   style: 'professional',
   wordCount: 300,
   tone: 'formal',
   paragraphCount: 6
 };
 
-type Style = 'professional' | 'casual' | 'storytelling';
-type Tone = 'formal' | 'conversational';
-
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
-  const safeSettings = { ...defaultSettings, ...settings };
+  const safeSettings = narrativeSettingsSchema.parse({ ...defaultSettings, ...settings });
 
   return (
     <Card>
@@ -32,7 +29,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
             onValueChange={(value) => {
               onChange({
                 ...safeSettings,
-                style: value as Style
+                style: value as NarrativeSettings['style']
               });
             }}
           >
@@ -54,7 +51,7 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
             onValueChange={(value) => {
               onChange({
                 ...safeSettings,
-                tone: value as Tone
+                tone: value as NarrativeSettings['tone']
               });
             }}
           >

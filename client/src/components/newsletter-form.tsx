@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema } from "@shared/schema";
+import { insertNewsletterSchema, narrativeSettingsSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,10 +50,10 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: true,
         newsOutlets: []
       },
-      narrativeSettings: {
+      narrativeSettings: narrativeSettingsSchema.parse({
         ...defaultNarrativeSettings,
         ...(newsletter?.narrativeSettings || {})
-      }
+      })
     }
   });
 
@@ -75,12 +75,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             safeMode: Boolean(data.tweetFilters?.safeMode),
             newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
           },
-          narrativeSettings: {
-            style: data.narrativeSettings?.style || defaultNarrativeSettings.style,
-            wordCount: Number(data.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
-            tone: data.narrativeSettings?.tone || defaultNarrativeSettings.tone,
-            paragraphCount: Number(data.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
-          }
+          narrativeSettings: narrativeSettingsSchema.parse(data.narrativeSettings)
         };
 
         const res = await apiRequest(method, url, payload);

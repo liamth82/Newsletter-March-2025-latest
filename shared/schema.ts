@@ -2,6 +2,16 @@ import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define the narrative settings schema first for better type inference
+export const narrativeSettingsSchema = z.object({
+  style: z.enum(['professional', 'casual', 'storytelling']),
+  wordCount: z.number().min(100).max(1000),
+  tone: z.enum(['formal', 'conversational']),
+  paragraphCount: z.number().min(1).max(10)
+});
+
+export type NarrativeSettings = z.infer<typeof narrativeSettingsSchema>;
+
 export type TweetFilters = {
   verifiedOnly: boolean;
   minFollowers: number;
@@ -9,13 +19,6 @@ export type TweetFilters = {
   excludeRetweets: boolean;
   safeMode: boolean;
   newsOutlets: string[];
-};
-
-export type NarrativeSettings = {
-  style: 'professional' | 'casual' | 'storytelling';
-  wordCount: number;
-  tone: 'formal' | 'conversational';
-  paragraphCount: number;
 };
 
 export const users = pgTable("users", {
@@ -123,12 +126,7 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   tweetFilters: true,
   narrativeSettings: true,
 }).extend({
-  narrativeSettings: z.object({
-    style: z.enum(['professional', 'casual', 'storytelling']),
-    wordCount: z.number().min(100).max(1000),
-    tone: z.enum(['formal', 'conversational']),
-    paragraphCount: z.number().min(1).max(10)
-  }).default({
+  narrativeSettings: narrativeSettingsSchema.default({
     style: 'professional',
     wordCount: 300,
     tone: 'formal',
