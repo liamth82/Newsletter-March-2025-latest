@@ -5,82 +5,75 @@ import { Card, CardContent } from "@/components/ui/card";
 import { type NarrativeSettings } from "@shared/schema";
 
 interface Props {
-  value?: NarrativeSettings;
+  value: NarrativeSettings;
   onChange: (value: NarrativeSettings) => void;
 }
 
+const styles = ["professional", "casual", "storytelling"] as const;
+const tones = ["formal", "conversational"] as const;
+
 export function NarrativeSettingsControl({ value, onChange }: Props) {
-  // Ensure we have valid default values
-  const settings: NarrativeSettings = value || {
-    style: "professional",
-    wordCount: 300,
-    tone: "formal",
-    paragraphCount: 6
-  };
-
-  const handleStyleChange = (newStyle: NarrativeSettings['style']) => {
-    onChange({
-      ...settings,
-      style: newStyle
-    });
-  };
-
-  const handleToneChange = (newTone: NarrativeSettings['tone']) => {
-    onChange({
-      ...settings,
-      tone: newTone
-    });
-  };
-
-  const handleWordCountChange = (values: number[]) => {
-    onChange({
-      ...settings,
-      wordCount: values[0]
-    });
-  };
-
-  const handleParagraphCountChange = (values: number[]) => {
-    onChange({
-      ...settings,
-      paragraphCount: values[0]
-    });
-  };
-
   return (
     <Card>
       <CardContent className="space-y-4 p-4">
         <div className="space-y-2">
           <Label>Writing Style</Label>
-          <Select value={settings.style} onValueChange={handleStyleChange}>
+          <Select
+            value={value.style}
+            onValueChange={(newStyle) => {
+              onChange({
+                ...value,
+                style: newStyle as NarrativeSettings['style']
+              });
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="professional">Professional</SelectItem>
-              <SelectItem value="casual">Casual</SelectItem>
-              <SelectItem value="storytelling">Storytelling</SelectItem>
+              {styles.map((style) => (
+                <SelectItem key={style} value={style}>
+                  {style.charAt(0).toUpperCase() + style.slice(1)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label>Tone</Label>
-          <Select value={settings.tone} onValueChange={handleToneChange}>
+          <Select
+            value={value.tone}
+            onValueChange={(newTone) => {
+              onChange({
+                ...value,
+                tone: newTone as NarrativeSettings['tone']
+              });
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="formal">Formal</SelectItem>
-              <SelectItem value="conversational">Conversational</SelectItem>
+              {tones.map((tone) => (
+                <SelectItem key={tone} value={tone}>
+                  {tone.charAt(0).toUpperCase() + tone.slice(1)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label>Target Word Count: {settings.wordCount}</Label>
+          <Label>Target Word Count: {value.wordCount}</Label>
           <Slider
-            value={[settings.wordCount]}
-            onValueChange={handleWordCountChange}
+            value={[value.wordCount]}
+            onValueChange={(values) => {
+              onChange({
+                ...value,
+                wordCount: values[0]
+              });
+            }}
             min={100}
             max={1000}
             step={50}
@@ -92,10 +85,15 @@ export function NarrativeSettingsControl({ value, onChange }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label>Number of Paragraphs: {settings.paragraphCount}</Label>
+          <Label>Number of Paragraphs: {value.paragraphCount}</Label>
           <Slider
-            value={[settings.paragraphCount]}
-            onValueChange={handleParagraphCountChange}
+            value={[value.paragraphCount]}
+            onValueChange={(values) => {
+              onChange({
+                ...value,
+                paragraphCount: values[0]
+              });
+            }}
             min={1}
             max={10}
             step={1}

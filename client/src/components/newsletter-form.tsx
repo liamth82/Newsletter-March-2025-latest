@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,13 @@ interface NewsletterFormProps {
   newsletter?: Newsletter | null;
 }
 
+const defaultNarrativeSettings: NarrativeSettings = {
+  style: "professional",
+  wordCount: 300,
+  tone: "formal",
+  paragraphCount: 6
+};
+
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const { toast } = useToast();
@@ -32,33 +39,28 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const form = useForm({
     resolver: zodResolver(insertNewsletterSchema),
     defaultValues: {
-      templateId: newsletter?.templateId || undefined,
+      templateId: newsletter?.templateId,
       keywords: newsletter?.keywords || [],
-      scheduleTime: newsletter?.scheduleTime || undefined,
+      scheduleTime: newsletter?.scheduleTime,
       tweetFilters: {
-        verifiedOnly: newsletter?.tweetFilters?.verifiedOnly || false,
-        minFollowers: newsletter?.tweetFilters?.minFollowers || 0,
-        excludeReplies: newsletter?.tweetFilters?.excludeReplies || false,
-        excludeRetweets: newsletter?.tweetFilters?.excludeRetweets || false,
+        verifiedOnly: newsletter?.tweetFilters?.verifiedOnly ?? false,
+        minFollowers: newsletter?.tweetFilters?.minFollowers ?? 0,
+        excludeReplies: newsletter?.tweetFilters?.excludeReplies ?? false,
+        excludeRetweets: newsletter?.tweetFilters?.excludeRetweets ?? false,
         safeMode: newsletter?.tweetFilters?.safeMode ?? true,
-        newsOutlets: newsletter?.tweetFilters?.newsOutlets || []
+        newsOutlets: newsletter?.tweetFilters?.newsOutlets ?? []
       },
-      narrativeSettings: newsletter?.narrativeSettings || {
-        style: "professional",
-        wordCount: 300,
-        tone: "formal",
-        paragraphCount: 6
-      }
+      narrativeSettings: newsletter?.narrativeSettings ?? defaultNarrativeSettings
     }
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
       const payload = {
-        templateId: parseInt(data.templateId),
+        templateId: parseInt(String(data.templateId)),
         keywords: data.keywords || [],
         scheduleTime: data.scheduleTime,
         tweetFilters: {
@@ -74,7 +76,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
 
       const res = await apiRequest(method, url, payload);
       if (!res.ok) {
-        throw new Error("Failed to save newsletter");
+        const error = await res.text();
+        throw new Error(error || "Failed to save newsletter");
       }
       return res.json();
     },
@@ -96,15 +99,17 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   return (
-    <DialogContent>
+    <DialogContent className="sm:max-w-[625px]">
       <DialogHeader>
-        <DialogTitle>{newsletter ? "Edit Newsletter" : "Create Newsletter"}</DialogTitle>
+        <DialogTitle>
+          {newsletter ? "Edit Newsletter" : "Create Newsletter"}
+        </DialogTitle>
         <DialogDescription>
           Configure your newsletter settings and content filters
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-4">
+      <div className="mt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
             <Tabs defaultValue="content" className="w-full">
