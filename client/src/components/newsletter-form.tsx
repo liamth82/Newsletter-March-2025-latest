@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,13 +20,6 @@ interface NewsletterFormProps {
   onSuccess: () => void;
   newsletter?: Newsletter | null;
 }
-
-const defaultNarrativeSettings = {
-  style: "professional" as const,
-  wordCount: 300,
-  tone: "formal" as const,
-  paragraphCount: 6,
-};
 
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
@@ -50,9 +43,11 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: newsletter?.tweetFilters?.safeMode || true,
         newsOutlets: newsletter?.tweetFilters?.newsOutlets || []
       },
-      narrativeSettings: {
-        ...defaultNarrativeSettings,
-        ...(newsletter?.narrativeSettings || {})
+      narrativeSettings: newsletter?.narrativeSettings || {
+        style: "professional",
+        wordCount: 300,
+        tone: "formal",
+        paragraphCount: 6
       }
     }
   });
@@ -74,10 +69,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           safeMode: Boolean(data.tweetFilters?.safeMode),
           newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
         },
-        narrativeSettings: {
-          ...defaultNarrativeSettings,
-          ...data.narrativeSettings
-        }
+        narrativeSettings: data.narrativeSettings
       });
 
       if (!res.ok) {
@@ -105,9 +97,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   return (
     <DialogContent className="max-w-xl">
       <DialogHeader>
-        <DialogTitle>
-          {newsletter ? "Edit Newsletter" : "Create Newsletter"}
-        </DialogTitle>
+        <DialogTitle>{newsletter ? "Edit Newsletter" : "Create Newsletter"}</DialogTitle>
         <DialogDescription>
           Configure your newsletter settings and content filters
         </DialogDescription>

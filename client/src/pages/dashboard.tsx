@@ -6,13 +6,13 @@ import { Plus, RefreshCw, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { NewsletterForm } from "@/components/newsletter-form";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Newsletter } from "@shared/schema";
 import { useState } from "react";
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNewsletter, setEditingNewsletter] = useState<Newsletter | null>(null);
 
   const { data: newsletters, isLoading } = useQuery<Newsletter[]>({
@@ -21,7 +21,12 @@ export default function Dashboard() {
 
   const handleEditComplete = () => {
     setEditingNewsletter(null);
-    setIsCreateOpen(false);
+    setDialogOpen(false);
+  };
+
+  const handleEdit = (newsletter: Newsletter) => {
+    setEditingNewsletter(newsletter);
+    setDialogOpen(true);
   };
 
   return (
@@ -30,11 +35,11 @@ export default function Dashboard() {
       <main className="flex-1 p-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Newsletters</h1>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => setEditingNewsletter(null)}>
                 <Plus className="h-4 w-4 mr-2" />
-                {editingNewsletter ? "Edit Newsletter" : "Create Newsletter"}
+                Create Newsletter
               </Button>
             </DialogTrigger>
             <NewsletterForm 
@@ -85,10 +90,7 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setEditingNewsletter(newsletter);
-                          setIsCreateOpen(true);
-                        }}
+                        onClick={() => handleEdit(newsletter)}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit

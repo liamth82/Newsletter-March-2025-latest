@@ -12,24 +12,35 @@ const defaultNarrativeSettings: NarrativeSettings = {
 };
 
 interface Props {
-  value: NarrativeSettings;
+  value?: NarrativeSettings;
   onChange: (value: NarrativeSettings) => void;
 }
 
-export function NarrativeSettingsControl({ value, onChange }: Props) {
+export function NarrativeSettingsControl({ value = defaultNarrativeSettings, onChange }: Props) {
   const settings = { ...defaultNarrativeSettings, ...value };
+
+  const handleStyleChange = (newStyle: NarrativeSettings['style']) => {
+    onChange({ ...settings, style: newStyle });
+  };
+
+  const handleToneChange = (newTone: NarrativeSettings['tone']) => {
+    onChange({ ...settings, tone: newTone });
+  };
+
+  const handleWordCountChange = (values: number[]) => {
+    onChange({ ...settings, wordCount: values[0] });
+  };
+
+  const handleParagraphCountChange = (values: number[]) => {
+    onChange({ ...settings, paragraphCount: values[0] });
+  };
 
   return (
     <Card>
       <CardContent className="space-y-4 p-4">
         <div className="space-y-2">
           <Label>Writing Style</Label>
-          <Select
-            value={settings.style}
-            onValueChange={(newValue: typeof settings.style) => {
-              onChange({ ...settings, style: newValue });
-            }}
-          >
+          <Select value={settings.style} onValueChange={handleStyleChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
             </SelectTrigger>
@@ -43,12 +54,7 @@ export function NarrativeSettingsControl({ value, onChange }: Props) {
 
         <div className="space-y-2">
           <Label>Tone</Label>
-          <Select
-            value={settings.tone}
-            onValueChange={(newValue: typeof settings.tone) => {
-              onChange({ ...settings, tone: newValue });
-            }}
-          >
+          <Select value={settings.tone} onValueChange={handleToneChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
             </SelectTrigger>
@@ -63,9 +69,7 @@ export function NarrativeSettingsControl({ value, onChange }: Props) {
           <Label>Target Word Count: {settings.wordCount}</Label>
           <Slider
             value={[settings.wordCount]}
-            onValueChange={(values) => {
-              onChange({ ...settings, wordCount: values[0] });
-            }}
+            onValueChange={handleWordCountChange}
             min={100}
             max={1000}
             step={50}
@@ -80,9 +84,7 @@ export function NarrativeSettingsControl({ value, onChange }: Props) {
           <Label>Number of Paragraphs: {settings.paragraphCount}</Label>
           <Slider
             value={[settings.paragraphCount]}
-            onValueChange={(values) => {
-              onChange({ ...settings, paragraphCount: values[0] });
-            }}
+            onValueChange={handleParagraphCountChange}
             min={1}
             max={10}
             step={1}
