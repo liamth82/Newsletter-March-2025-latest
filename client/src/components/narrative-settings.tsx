@@ -16,14 +16,12 @@ const defaultSettings: NarrativeSettingsType = {
   paragraphCount: 6
 };
 
-const styles = ['professional', 'casual', 'storytelling'] as const;
-const tones = ['formal', 'conversational'] as const;
-
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
   const safeSettings = { ...defaultSettings, ...settings };
 
   const handleStyleChange = (value: string) => {
-    if (styles.includes(value as NarrativeSettingsType['style'])) {
+    const validStyles = ['professional', 'casual', 'storytelling'] as const;
+    if (validStyles.includes(value as NarrativeSettingsType['style'])) {
       onChange({
         ...safeSettings,
         style: value as NarrativeSettingsType['style']
@@ -32,26 +30,13 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
   };
 
   const handleToneChange = (value: string) => {
-    if (tones.includes(value as NarrativeSettingsType['tone'])) {
+    const validTones = ['formal', 'conversational'] as const;
+    if (validTones.includes(value as NarrativeSettingsType['tone'])) {
       onChange({
         ...safeSettings,
         tone: value as NarrativeSettingsType['tone']
       });
     }
-  };
-
-  const handleWordCountChange = (value: number[]) => {
-    onChange({
-      ...safeSettings,
-      wordCount: Math.max(100, Math.min(1000, value[0]))
-    });
-  };
-
-  const handleParagraphCountChange = (value: number[]) => {
-    onChange({
-      ...safeSettings,
-      paragraphCount: Math.max(1, Math.min(10, value[0]))
-    });
   };
 
   return (
@@ -94,7 +79,12 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Target Word Count: {safeSettings.wordCount}</Label>
           <Slider
             value={[safeSettings.wordCount]}
-            onValueChange={handleWordCountChange}
+            onValueChange={(value) => {
+              onChange({
+                ...safeSettings,
+                wordCount: value[0]
+              });
+            }}
             min={100}
             max={1000}
             step={50}
@@ -109,7 +99,12 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Number of Paragraphs: {safeSettings.paragraphCount}</Label>
           <Slider
             value={[safeSettings.paragraphCount]}
-            onValueChange={handleParagraphCountChange}
+            onValueChange={(value) => {
+              onChange({
+                ...safeSettings,
+                paragraphCount: value[0]
+              });
+            }}
             min={1}
             max={10}
             step={1}

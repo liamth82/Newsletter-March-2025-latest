@@ -60,6 +60,14 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         const method = newsletter ? "PATCH" : "POST";
         const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
+        // Ensure narrative settings are properly structured
+        const narrativeSettings = {
+          style: data.narrativeSettings?.style || defaultNarrativeSettings.style,
+          wordCount: Number(data.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
+          tone: data.narrativeSettings?.tone || defaultNarrativeSettings.tone,
+          paragraphCount: Number(data.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
+        };
+
         const payload = {
           templateId: Number(data.templateId),
           keywords: Array.isArray(data.keywords) ? data.keywords : [],
@@ -72,10 +80,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             safeMode: Boolean(data.tweetFilters?.safeMode),
             newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
           },
-          narrativeSettings: {
-            ...defaultNarrativeSettings,
-            ...data.narrativeSettings
-          }
+          narrativeSettings
         };
 
         const res = await apiRequest(method, url, payload);
