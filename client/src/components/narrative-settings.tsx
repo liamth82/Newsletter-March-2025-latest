@@ -4,20 +4,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { type NarrativeSettings } from "@shared/schema";
 
-interface NarrativeSettingsPanelProps {
-  settings: NarrativeSettings;
-  onChange: (settings: NarrativeSettings) => void;
-}
-
-const defaultSettings: NarrativeSettings = {
+const defaultNarrativeSettings: NarrativeSettings = {
   style: "professional",
   wordCount: 300,
   tone: "formal",
   paragraphCount: 6
 };
 
-export function NarrativeSettingsPanel({ settings = defaultSettings, onChange }: NarrativeSettingsPanelProps) {
-  const currentSettings = { ...defaultSettings, ...settings };
+interface Props {
+  value: NarrativeSettings;
+  onChange: (value: NarrativeSettings) => void;
+}
+
+export function NarrativeSettingsControl({ value, onChange }: Props) {
+  const settings = { ...defaultNarrativeSettings, ...value };
 
   return (
     <Card>
@@ -25,10 +25,10 @@ export function NarrativeSettingsPanel({ settings = defaultSettings, onChange }:
         <div className="space-y-2">
           <Label>Writing Style</Label>
           <Select
-            value={currentSettings.style}
-            onValueChange={(value) => 
-              onChange({ ...currentSettings, style: value as NarrativeSettings['style'] })
-            }
+            value={settings.style}
+            onValueChange={(newValue: typeof settings.style) => {
+              onChange({ ...settings, style: newValue });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a style" />
@@ -44,10 +44,10 @@ export function NarrativeSettingsPanel({ settings = defaultSettings, onChange }:
         <div className="space-y-2">
           <Label>Tone</Label>
           <Select
-            value={currentSettings.tone}
-            onValueChange={(value) => 
-              onChange({ ...currentSettings, tone: value as NarrativeSettings['tone'] })
-            }
+            value={settings.tone}
+            onValueChange={(newValue: typeof settings.tone) => {
+              onChange({ ...settings, tone: newValue });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select tone" />
@@ -60,12 +60,12 @@ export function NarrativeSettingsPanel({ settings = defaultSettings, onChange }:
         </div>
 
         <div className="space-y-2">
-          <Label>Target Word Count: {currentSettings.wordCount}</Label>
+          <Label>Target Word Count: {settings.wordCount}</Label>
           <Slider
-            value={[currentSettings.wordCount]}
-            onValueChange={(value) => 
-              onChange({ ...currentSettings, wordCount: value[0] })
-            }
+            value={[settings.wordCount]}
+            onValueChange={(values) => {
+              onChange({ ...settings, wordCount: values[0] });
+            }}
             min={100}
             max={1000}
             step={50}
@@ -77,12 +77,12 @@ export function NarrativeSettingsPanel({ settings = defaultSettings, onChange }:
         </div>
 
         <div className="space-y-2">
-          <Label>Number of Paragraphs: {currentSettings.paragraphCount}</Label>
+          <Label>Number of Paragraphs: {settings.paragraphCount}</Label>
           <Slider
-            value={[currentSettings.paragraphCount]}
-            onValueChange={(value) => 
-              onChange({ ...currentSettings, paragraphCount: value[0] })
-            }
+            value={[settings.paragraphCount]}
+            onValueChange={(values) => {
+              onChange({ ...settings, paragraphCount: values[0] });
+            }}
             min={1}
             max={10}
             step={1}

@@ -1,13 +1,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template, type NarrativeSettings } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
-import { NarrativeSettingsPanel } from "./narrative-settings";
+import { NarrativeSettingsControl } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
@@ -20,11 +20,11 @@ interface NewsletterFormProps {
   newsletter?: Newsletter | null;
 }
 
-const defaultNarrativeSettings: NarrativeSettingsType = {
+const defaultNarrativeSettings: NarrativeSettings = {
   style: "professional",
   wordCount: 300,
   tone: "formal",
-  paragraphCount: 6,
+  paragraphCount: 6
 };
 
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
@@ -163,8 +163,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                 <FormItem>
                   <FormLabel>Narrative Style</FormLabel>
                   <FormControl>
-                    <NarrativeSettingsPanel
-                      settings={field.value}
+                    <NarrativeSettingsControl
+                      value={field.value}
                       onChange={field.onChange}
                     />
                   </FormControl>
