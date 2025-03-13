@@ -6,7 +6,7 @@ import { Plus, RefreshCw, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { NewsletterForm } from "@/components/newsletter-form";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Newsletter } from "@shared/schema";
 import { useState } from "react";
 
@@ -29,24 +29,21 @@ export default function Dashboard() {
     setDialogOpen(true);
   };
 
+  const handleCreate = () => {
+    setEditingNewsletter(null);
+    setDialogOpen(true);
+  };
+
   return (
     <div className="flex min-h-screen">
       <SidebarNav />
       <main className="flex-1 p-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Newsletters</h1>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditingNewsletter(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Newsletter
-              </Button>
-            </DialogTrigger>
-            <NewsletterForm 
-              onSuccess={handleEditComplete}
-              newsletter={editingNewsletter}
-            />
-          </Dialog>
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Newsletter
+          </Button>
         </div>
 
         {isLoading ? (
@@ -123,6 +120,13 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <NewsletterForm
+            onSuccess={handleEditComplete}
+            newsletter={editingNewsletter}
+          />
+        </Dialog>
       </main>
     </div>
   );

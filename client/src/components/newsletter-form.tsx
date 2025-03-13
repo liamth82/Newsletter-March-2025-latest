@@ -9,11 +9,11 @@ import { KeywordManager } from "./keyword-manager";
 import { TweetFilters } from "./tweet-filters";
 import { NarrativeSettingsControl } from "./narrative-settings";
 import { ScheduleDialog } from "./schedule-dialog";
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
 interface NewsletterFormProps {
@@ -40,7 +40,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         minFollowers: newsletter?.tweetFilters?.minFollowers || 0,
         excludeReplies: newsletter?.tweetFilters?.excludeReplies || false,
         excludeRetweets: newsletter?.tweetFilters?.excludeRetweets || false,
-        safeMode: newsletter?.tweetFilters?.safeMode || true,
+        safeMode: newsletter?.tweetFilters?.safeMode ?? true,
         newsOutlets: newsletter?.tweetFilters?.newsOutlets || []
       },
       narrativeSettings: newsletter?.narrativeSettings || {
@@ -96,7 +96,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   return (
-    <DialogContent className="max-w-xl">
+    <DialogContent>
       <DialogHeader>
         <DialogTitle>{newsletter ? "Edit Newsletter" : "Create Newsletter"}</DialogTitle>
         <DialogDescription>
@@ -104,117 +104,119 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
-          <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="content">Content</TabsTrigger>
-              <TabsTrigger value="filters">Filters</TabsTrigger>
-            </TabsList>
+      <div className="mt-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
+            <Tabs defaultValue="content" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="filters">Filters</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="content" className="space-y-4">
-              <FormField
-                control={form.control}
-                name="templateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Template</FormLabel>
-                    <Select
-                      value={field.value?.toString()}
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                    >
+              <TabsContent value="content" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="templateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Template</FormLabel>
+                      <Select
+                        value={field.value?.toString()}
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a template" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {templates?.map((template) => (
+                            <SelectItem
+                              key={template.id}
+                              value={template.id.toString()}
+                            >
+                              {template.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="keywords"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Keywords</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a template" />
-                        </SelectTrigger>
+                        <KeywordManager
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {templates?.map((template) => (
-                          <SelectItem
-                            key={template.id}
-                            value={template.id.toString()}
-                          >
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="keywords"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Keywords</FormLabel>
-                    <FormControl>
-                      <KeywordManager
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="narrativeSettings"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Narrative Style</FormLabel>
+                      <FormControl>
+                        <NarrativeSettingsControl
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
 
-              <FormField
-                control={form.control}
-                name="narrativeSettings"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Narrative Style</FormLabel>
-                    <FormControl>
-                      <NarrativeSettingsControl
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </TabsContent>
+              <TabsContent value="filters" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="tweetFilters"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <TweetFilters
+                          onFiltersChange={field.onChange}
+                          initialFilters={field.value}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+            </Tabs>
 
-            <TabsContent value="filters" className="space-y-4">
-              <FormField
-                control={form.control}
-                name="tweetFilters"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <TweetFilters
-                        onFiltersChange={field.onChange}
-                        initialFilters={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsScheduleOpen(true)}
+              >
+                Schedule
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-              />
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsScheduleOpen(true)}
-            >
-              Schedule
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {newsletter ? "Update" : "Create"} Newsletter
-            </Button>
-          </div>
-        </form>
-      </Form>
+                {newsletter ? "Update" : "Create"} Newsletter
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
 
       <ScheduleDialog
         open={isScheduleOpen}
