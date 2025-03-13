@@ -101,6 +101,17 @@ export default function Preview() {
     );
   }
 
+  // Generate tweet content before processing template
+  const tweetContent = generateNarrativeSummary(
+    newsletter.tweetContent,
+    newsletter.narrativeSettings || {
+      style: 'professional',
+      wordCount: 300,
+      tone: 'formal',
+      paragraphCount: 6
+    }
+  );
+
   // Process template content with Handlebars-like replacements
   let processedContent = template.content;
 
@@ -110,18 +121,7 @@ export default function Preview() {
     template.defaultTitle || 'Newsletter Preview'
   );
 
-  // Generate tweet content
-  const tweetContent = generateNarrativeSummary(
-    newsletter.tweetContent || [],
-    newsletter.narrativeSettings || {
-      style: 'professional',
-      wordCount: 300,
-      tone: 'formal',
-      paragraphCount: 6
-    }
-  );
-
-  // Replace tweets placeholder
+  // Replace tweets placeholder with generated content
   processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
 
   // Handle logos section
@@ -203,7 +203,7 @@ export default function Preview() {
           <Card>
             <CardContent className="p-6">
               <div 
-                className="preview-content"
+                className="preview-content newsletter-content"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(styles + processedContent)
                 }}
@@ -216,7 +216,7 @@ export default function Preview() {
   );
 }
 
-// Update the generateNarrativeSummary function with better type safety
+// Helper function to generate narrative content from tweets
 function generateNarrativeSummary(tweets: any[], settings: NarrativeSettings) {
   if (!tweets || tweets.length === 0) {
     return '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
