@@ -50,7 +50,10 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: true,
         newsOutlets: []
       },
-      narrativeSettings: newsletter?.narrativeSettings || defaultNarrativeSettings
+      narrativeSettings: {
+        ...defaultNarrativeSettings,
+        ...(newsletter?.narrativeSettings || {})
+      }
     }
   });
 
@@ -60,7 +63,6 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         const method = newsletter ? "PATCH" : "POST";
         const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
-        // Convert form data to expected types
         const payload = {
           templateId: Number(data.templateId),
           keywords: Array.isArray(data.keywords) ? data.keywords : [],
@@ -74,20 +76,17 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             newsOutlets: Array.isArray(data.tweetFilters?.newsOutlets) ? data.tweetFilters.newsOutlets : []
           },
           narrativeSettings: {
-            style: defaultNarrativeSettings.style,
-            wordCount: defaultNarrativeSettings.wordCount,
-            tone: defaultNarrativeSettings.tone,
-            paragraphCount: defaultNarrativeSettings.paragraphCount,
-            ...(data.narrativeSettings || {})
+            style: data.narrativeSettings?.style || defaultNarrativeSettings.style,
+            wordCount: Number(data.narrativeSettings?.wordCount || defaultNarrativeSettings.wordCount),
+            tone: data.narrativeSettings?.tone || defaultNarrativeSettings.tone,
+            paragraphCount: Number(data.narrativeSettings?.paragraphCount || defaultNarrativeSettings.paragraphCount)
           }
         };
 
         const res = await apiRequest(method, url, payload);
-
         if (!res.ok) {
           throw new Error('Failed to save newsletter');
         }
-
         return await res.json();
       } catch (error: any) {
         console.error('Newsletter mutation error:', error);
@@ -181,14 +180,10 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                     <NarrativeSettings
                       settings={field.value}
                       onChange={(settings) => {
-                        // Ensure type safety when updating narrative settings
-                        const validatedSettings: NarrativeSettingsType = {
-                          style: settings.style || defaultNarrativeSettings.style,
-                          wordCount: settings.wordCount || defaultNarrativeSettings.wordCount,
-                          tone: settings.tone || defaultNarrativeSettings.tone,
-                          paragraphCount: settings.paragraphCount || defaultNarrativeSettings.paragraphCount
-                        };
-                        field.onChange(validatedSettings);
+                        field.onChange({
+                          ...defaultNarrativeSettings,
+                          ...settings
+                        });
                       }}
                     />
                   </FormControl>

@@ -16,8 +16,10 @@ const defaultSettings: NarrativeSettingsType = {
   paragraphCount: 6
 };
 
+type Style = 'professional' | 'casual' | 'storytelling';
+type Tone = 'formal' | 'conversational';
+
 export function NarrativeSettings({ settings = defaultSettings, onChange }: NarrativeSettingsProps) {
-  // Ensure we always have valid settings by merging with defaults
   const safeSettings = { ...defaultSettings, ...settings };
 
   return (
@@ -27,10 +29,10 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Writing Style</Label>
           <Select
             value={safeSettings.style}
-            onValueChange={(value: 'professional' | 'casual' | 'storytelling') => {
+            onValueChange={(value) => {
               onChange({
                 ...safeSettings,
-                style: value
+                style: value as Style
               });
             }}
           >
@@ -49,10 +51,10 @@ export function NarrativeSettings({ settings = defaultSettings, onChange }: Narr
           <Label>Tone</Label>
           <Select
             value={safeSettings.tone}
-            onValueChange={(value: 'formal' | 'conversational') => {
+            onValueChange={(value) => {
               onChange({
                 ...safeSettings,
-                tone: value
+                tone: value as Tone
               });
             }}
           >
