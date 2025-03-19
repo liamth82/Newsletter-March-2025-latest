@@ -2,25 +2,6 @@ import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Define the narrative settings schema first for better type inference
-export const narrativeSettingsSchema = z.object({
-  style: z.enum(['professional', 'casual', 'storytelling']),
-  wordCount: z.number().min(100).max(1000),
-  tone: z.enum(['formal', 'conversational']),
-  paragraphCount: z.number().min(1).max(10)
-});
-
-export type NarrativeSettings = z.infer<typeof narrativeSettingsSchema>;
-
-export type TweetFilters = {
-  verifiedOnly: boolean;
-  minFollowers: number;
-  excludeReplies: boolean;
-  excludeRetweets: boolean;
-  safeMode: boolean;
-  newsOutlets: string[];
-};
-
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -50,25 +31,10 @@ export const newsletters = pgTable("newsletters", {
   keywords: text("keywords").array().notNull(),
   scheduleTime: timestamp("schedule_time"),
   status: text("status").notNull().default('draft'),
-  tweetContent: json("tweet_content").$type<any[]>().array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   sentAt: timestamp("sent_at"),
   totalRecipients: integer("total_recipients").default(0),
   deliveryStatus: text("delivery_status").default('pending'),
-  tweetFilters: json("tweet_filters").$type<TweetFilters>().default({
-    verifiedOnly: false,
-    minFollowers: 0,
-    excludeReplies: false,
-    excludeRetweets: false,
-    safeMode: true,
-    newsOutlets: []
-  }),
-  narrativeSettings: json("narrative_settings").$type<NarrativeSettings>().default({
-    style: 'professional',
-    wordCount: 300,
-    tone: 'formal',
-    paragraphCount: 6
-  })
 });
 
 export const analyticsEvents = pgTable("analytics_events", {
@@ -122,16 +88,9 @@ export const insertTemplateSchema = createInsertSchema(templates).pick({
 export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   templateId: true,
   keywords: true,
-  scheduleTime: true,
-  tweetFilters: true,
-  narrativeSettings: true,
 }).extend({
-  narrativeSettings: narrativeSettingsSchema.default({
-    style: 'professional',
-    wordCount: 300,
-    tone: 'formal',
-    paragraphCount: 6
-  })
+  templateId: z.number(),
+  keywords: z.array(z.string())
 });
 
 export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).pick({
