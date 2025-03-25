@@ -18,12 +18,12 @@ const FOLLOWER_THRESHOLDS = {
   low: 1000,
   medium: 10000,
   high: 100000
-};
+} as const;
 
 export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) {
   const [filters, setFilters] = useState<TweetFilters>({
     verifiedOnly: initialFilters?.verifiedOnly ?? false,
-    minFollowers: initialFilters?.minFollowers ?? 0,
+    minFollowers: initialFilters?.minFollowers ?? FOLLOWER_THRESHOLDS.low,
     excludeReplies: initialFilters?.excludeReplies ?? false,
     excludeRetweets: initialFilters?.excludeRetweets ?? false,
     safeMode: initialFilters?.safeMode ?? true,
@@ -64,11 +64,6 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
     handleFilterChange('accountTypes', newTypes);
   };
 
-  const handleFollowerThresholdChange = (value: 'low' | 'medium' | 'high') => {
-    handleFilterChange('followerThreshold', value);
-    handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[value]);
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -100,8 +95,11 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
         <div className="space-y-2">
           <Label className="text-base font-semibold">Follower Threshold</Label>
           <Select
-            value={filters.followerThreshold}
-            onValueChange={handleFollowerThresholdChange}
+            defaultValue={filters.followerThreshold}
+            onValueChange={(value: keyof typeof FOLLOWER_THRESHOLDS) => {
+              handleFilterChange('followerThreshold', value);
+              handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[value]);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select follower threshold" />
