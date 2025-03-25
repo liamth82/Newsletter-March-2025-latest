@@ -21,15 +21,15 @@ const FOLLOWER_THRESHOLDS = {
 };
 
 export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) {
-  const [filters, setFilters] = useState<TweetFilters>(initialFilters || {
-    verifiedOnly: false,
-    minFollowers: 0,
-    excludeReplies: false,
-    excludeRetweets: false,
-    safeMode: true,
-    newsOutlets: [],
-    followerThreshold: 'low',
-    accountTypes: []
+  const [filters, setFilters] = useState<TweetFilters>({
+    verifiedOnly: initialFilters?.verifiedOnly ?? false,
+    minFollowers: initialFilters?.minFollowers ?? 0,
+    excludeReplies: initialFilters?.excludeReplies ?? false,
+    excludeRetweets: initialFilters?.excludeRetweets ?? false,
+    safeMode: initialFilters?.safeMode ?? true,
+    newsOutlets: initialFilters?.newsOutlets ?? [],
+    followerThreshold: initialFilters?.followerThreshold ?? 'low',
+    accountTypes: initialFilters?.accountTypes ?? []
   });
 
   const { data: sectors = [] } = useQuery<Sector[]>({
@@ -64,6 +64,11 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
     handleFilterChange('accountTypes', newTypes);
   };
 
+  const handleFollowerThresholdChange = (value: 'low' | 'medium' | 'high') => {
+    handleFilterChange('followerThreshold', value);
+    handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[value]);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -96,10 +101,7 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
           <Label className="text-base font-semibold">Follower Threshold</Label>
           <Select
             value={filters.followerThreshold}
-            onValueChange={(value: 'low' | 'medium' | 'high') => {
-              handleFilterChange('followerThreshold', value);
-              handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[value]);
-            }}
+            onValueChange={handleFollowerThresholdChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select follower threshold" />
