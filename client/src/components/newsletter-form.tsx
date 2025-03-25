@@ -6,7 +6,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KeywordManager } from "./keyword-manager";
+import { TweetFiltersControl } from "./tweet-filters";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -28,6 +30,16 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     defaultValues: {
       templateId: newsletter?.templateId || undefined,
       keywords: newsletter?.keywords || [],
+      tweetFilters: newsletter?.tweetFilters || {
+        verifiedOnly: false,
+        minFollowers: 0,
+        excludeReplies: false,
+        excludeRetweets: false,
+        safeMode: true,
+        newsOutlets: [],
+        followerThreshold: 'low',
+        accountTypes: []
+      }
     }
   });
 
@@ -39,6 +51,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       const payload = {
         templateId: parseInt(String(data.templateId)),
         keywords: data.keywords || [],
+        tweetFilters: data.tweetFilters
       };
 
       const res = await apiRequest(method, url, payload);
@@ -46,11 +59,9 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       if (!res.ok) {
         const errorText = await res.text();
         try {
-          // Try to parse error as JSON
           const errorJson = JSON.parse(errorText);
           throw new Error(errorJson.message || "Failed to save newsletter");
         } catch (e) {
-          // If parsing fails, use the raw error text
           throw new Error(errorText || "Failed to save newsletter");
         }
       }
@@ -76,65 +87,90 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
+    <DialogContent className="sm:max-w-[625px]">
       <DialogHeader>
-        <DialogTitle>
-          {newsletter ? "Edit Newsletter" : "Create Newsletter"}
-        </DialogTitle>
+        <DialogTitle>{newsletter ? "Edit Newsletter" : "Create Newsletter"}</DialogTitle>
         <DialogDescription>
-          Configure your newsletter settings
+          Configure your newsletter settings and filters
         </DialogDescription>
       </DialogHeader>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="templateId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Template</FormLabel>
-                <Select
-                  value={field.value?.toString()}
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a template" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {templates?.map((template) => (
-                      <SelectItem
-                        key={template.id}
-                        value={template.id.toString()}
-                      >
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <Tabs defaultValue="content" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="content">Content</TabsTrigger>
+              <TabsTrigger value="filters">Filters</TabsTrigger>
+            </TabsList>
 
-          <FormField
-            control={form.control}
-            name="keywords"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Keywords</FormLabel>
-                <FormControl>
-                  <KeywordManager
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <TabsContent value="content" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="templateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Template</FormLabel>
+                    <Select
+                      value={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a template" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {templates?.map((template) => (
+                          <SelectItem
+                            key={template.id}
+                            value={template.id.toString()}
+                          >
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="keywords"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Keywords</FormLabel>
+                    <FormControl>
+                      <KeywordManager
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+
+            <TabsContent value="filters" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="tweetFilters"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <TweetFiltersControl
+                        onFiltersChange={field.onChange}
+                        initialFilters={field.value}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+          </Tabs>
 
           <div className="flex justify-end">
             <Button type="submit" disabled={createMutation.isPending}>

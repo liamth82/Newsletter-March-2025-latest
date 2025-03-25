@@ -1,17 +1,15 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewsOutletsManager } from "./news-outlets-manager";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sector, TweetFilters } from "@shared/schema";
+import { Sector, type TweetFilters } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle } from "lucide-react";
 
-interface TweetFiltersProps {
+interface Props {
   onFiltersChange: (filters: TweetFilters) => void;
   initialFilters?: TweetFilters;
 }
@@ -22,7 +20,7 @@ const FOLLOWER_THRESHOLDS = {
   high: 100000
 };
 
-export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersProps) {
+export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) {
   const [filters, setFilters] = useState<TweetFilters>(initialFilters || {
     verifiedOnly: false,
     minFollowers: 0,
@@ -53,8 +51,7 @@ export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersPr
   const handleImportSector = async (sectorId: string) => {
     const sector = sectors.find(s => s.id === parseInt(sectorId));
     if (sector) {
-      // Merge existing handles with sector handles, removing duplicates
-      const uniqueHandles = [...new Set([...filters.newsOutlets, ...sector.handles])];
+      const uniqueHandles = Array.from(new Set([...filters.newsOutlets, ...sector.handles]));
       handleFilterChange('newsOutlets', uniqueHandles);
     }
   };
