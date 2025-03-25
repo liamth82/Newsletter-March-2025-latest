@@ -10,6 +10,9 @@ export type TweetFilters = {
   excludeRetweets: boolean;
   safeMode: boolean;
   newsOutlets: string[];
+  sectorId?: number; // Optional sector ID to import handles from
+  followerThreshold: 'low' | 'medium' | 'high'; // Different follower level categories
+  accountTypes: ('news' | 'verified' | 'influencer')[]; // Types of accounts to include
 };
 
 export type Tweet = {
@@ -65,7 +68,9 @@ export const newsletters = pgTable("newsletters", {
     excludeReplies: false,
     excludeRetweets: false,
     safeMode: true,
-    newsOutlets: []
+    newsOutlets: [],
+    followerThreshold: 'low',
+    accountTypes: []
   })
 });
 
@@ -129,7 +134,10 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
     excludeReplies: z.boolean().optional(),
     excludeRetweets: z.boolean().optional(),
     safeMode: z.boolean().optional(),
-    newsOutlets: z.array(z.string()).optional()
+    newsOutlets: z.array(z.string()).optional(),
+    sectorId: z.number().optional(),
+    followerThreshold: z.enum(['low', 'medium', 'high']).optional(),
+    accountTypes: z.array(z.enum(['news', 'verified', 'influencer'])).optional()
   }).optional()
 });
 

@@ -7,21 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { NewsOutletsManager } from "./news-outlets-manager";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sector } from "@shared/schema";
-
-interface TweetFilters {
-  verifiedOnly: boolean;
-  minFollowers: number;
-  excludeReplies: boolean;
-  excludeRetweets: boolean;
-  safeMode: boolean;
-  newsOutlets: string[];
-}
+import { Sector, TweetFilters } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle } from "lucide-react";
 
 interface TweetFiltersProps {
   onFiltersChange: (filters: TweetFilters) => void;
   initialFilters?: TweetFilters;
 }
+
+const FOLLOWER_THRESHOLDS = {
+  low: 1000,
+  medium: 10000,
+  high: 100000
+};
 
 export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersProps) {
   const [filters, setFilters] = useState<TweetFilters>(initialFilters || {
@@ -31,6 +30,12 @@ export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersPr
     excludeRetweets: false,
     safeMode: true,
     newsOutlets: [],
+    followerThreshold: 'low',
+    accountTypes: []
+  });
+
+  const { data: sectors = [] } = useQuery<Sector[]>({
+    queryKey: ["/api/sectors"],
   });
 
   useEffect(() => {
@@ -39,23 +44,27 @@ export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersPr
     }
   }, [initialFilters]);
 
-  const { data: sectors = [] } = useQuery<Sector[]>({
-    queryKey: ["/api/sectors"],
-  });
-
   const handleFilterChange = (key: keyof TweetFilters, value: any) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     onFiltersChange(newFilters);
   };
 
-  const handleImportSector = (sectorId: string) => {
+  const handleImportSector = async (sectorId: string) => {
     const sector = sectors.find(s => s.id === parseInt(sectorId));
     if (sector) {
       // Merge existing handles with sector handles, removing duplicates
       const uniqueHandles = [...new Set([...filters.newsOutlets, ...sector.handles])];
       handleFilterChange('newsOutlets', uniqueHandles);
     }
+  };
+
+  const handleAccountTypeToggle = (type: 'news' | 'verified' | 'influencer') => {
+    const currentTypes = filters.accountTypes || [];
+    const newTypes = currentTypes.includes(type)
+      ? currentTypes.filter(t => t !== type)
+      : [...currentTypes, type];
+    handleFilterChange('accountTypes', newTypes);
   };
 
   return (
@@ -68,9 +77,48 @@ export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersPr
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
+          <Label className="text-base font-semibold">Account Types</Label>
+          <div className="flex flex-wrap gap-2">
+            {(['news', 'verified', 'influencer'] as const).map((type) => (
+              <Badge
+                key={type}
+                variant={filters.accountTypes?.includes(type) ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => handleAccountTypeToggle(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+                {filters.accountTypes?.includes(type) && (
+                  <CheckCircle className="ml-1 h-3 w-3" />
+                )}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-base font-semibold">Follower Threshold</Label>
+          <Select
+            value={filters.followerThreshold}
+            onValueChange={(value: 'low' | 'medium' | 'high') => {
+              handleFilterChange('followerThreshold', value);
+              handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[value]);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select follower threshold" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low (1K+)</SelectItem>
+              <SelectItem value="medium">Medium (10K+)</SelectItem>
+              <SelectItem value="high">High (100K+)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label className="text-base font-semibold">Trusted News Sources</Label>
           <div className="text-sm text-muted-foreground mb-2">
-            Add Twitter handles of trusted news outlets (e.g. Reuters, AP, BBCNews) to only receive content from these sources
+            Add Twitter handles of trusted news outlets or import from a sector
           </div>
           {sectors.length > 0 && (
             <div className="flex gap-2 mb-4">
@@ -129,23 +177,6 @@ export function TweetFilters({ onFiltersChange, initialFilters }: TweetFiltersPr
                 onCheckedChange={(checked) => handleFilterChange('safeMode', checked)}
               />
             </div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-base font-semibold">Minimum Followers</Label>
-          <div className="text-sm text-muted-foreground mb-2">
-            Filter out accounts with fewer followers to focus on established sources
-          </div>
-          <Slider
-            value={[filters.minFollowers]}
-            onValueChange={(value) => handleFilterChange('minFollowers', value[0])}
-            max={100000}
-            step={1000}
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>0</span>
-            <span>100K</span>
           </div>
         </div>
       </CardContent>
