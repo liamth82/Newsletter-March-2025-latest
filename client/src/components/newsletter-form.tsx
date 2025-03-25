@@ -26,7 +26,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const form = useForm({
     resolver: zodResolver(insertNewsletterSchema),
     defaultValues: {
-      templateId: newsletter?.templateId,
+      templateId: newsletter?.templateId || undefined,
       keywords: newsletter?.keywords || [],
     }
   });
@@ -42,11 +42,21 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       };
 
       const res = await apiRequest(method, url, payload);
+
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Failed to save newsletter");
+        const errorText = await res.text();
+        try {
+          // Try to parse error as JSON
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.message || "Failed to save newsletter");
+        } catch (e) {
+          // If parsing fails, use the raw error text
+          throw new Error(errorText || "Failed to save newsletter");
+        }
       }
-      return res.json();
+
+      const responseData = await res.json();
+      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });

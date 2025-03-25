@@ -100,6 +100,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update the PATCH route for newsletters
+  app.patch("/api/newsletters/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const newsletter = await storage.getNewsletter(parseInt(req.params.id));
+      if (!newsletter) {
+        return res.status(404).json({ message: "Newsletter not found" });
+      }
+
+      const parsed = insertNewsletterSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid newsletter data", errors: parsed.error });
+      }
+
+      const updated = await storage.updateNewsletter(parseInt(req.params.id), {
+        templateId: parsed.data.templateId,
+        keywords: parsed.data.keywords,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating newsletter:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to update newsletter" 
+      });
+    }
+  });
+
+
   // Twitter Integration
   app.post("/api/newsletters/:id/tweets", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
