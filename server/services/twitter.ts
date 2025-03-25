@@ -14,47 +14,48 @@ interface TweetFilters {
   newsOutlets?: string[];
 }
 
+if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_SECRET) {
+  console.error('Missing Twitter API credentials');
+  throw new Error('Twitter API credentials are required');
+}
+
 const client = new TwitterApi({
-  appKey: process.env.TWITTER_API_KEY!,
-  appSecret: process.env.TWITTER_API_SECRET!,
+  appKey: process.env.TWITTER_API_KEY,
+  appSecret: process.env.TWITTER_API_SECRET,
 });
 
 export async function searchTweets(keywords: string[], filters: TweetFilters = {}) {
   try {
-    console.log('Searching tweets with keywords and filters:', { keywords, filters });
+    console.log('Starting tweet search with:', { keywords, filters });
+
     if (!keywords || keywords.length === 0) {
-      console.log('No keywords provided');
+      console.log('No keywords provided for search');
       return [];
     }
 
     const appClient = await client.appLogin();
-    console.log('Successfully authenticated with Twitter');
+    console.log('Successfully authenticated with Twitter API');
 
-    // Build query string with filters
+    // Build query string
     const queryParts = [...keywords];
 
-    // Add news outlet filtering if specified
-    if (filters.newsOutlets && filters.newsOutlets.length > 0) {
-      const fromQueries = filters.newsOutlets.map(handle => `from:${handle.replace('@', '')}`);
+    if (filters.newsOutlets?.length) {
+      const fromQueries = filters.newsOutlets.map(handle => 
+        `from:${handle.replace(/^@/, '').replace(/https?:\/\/(x|twitter)\.com\//, '')}`
+      );
       queryParts.push(`(${fromQueries.join(' OR ')})`);
     }
 
-    if (filters.verifiedOnly) {
-      queryParts.push('is:verified');
-    }
-    if (filters.excludeReplies) {
-      queryParts.push('-is:reply');
-    }
-    if (filters.excludeRetweets) {
-      queryParts.push('-is:retweet');
-    }
+    if (filters.verifiedOnly) queryParts.push('is:verified');
+    if (filters.excludeReplies) queryParts.push('-is:reply');
+    if (filters.excludeRetweets) queryParts.push('-is:retweet');
     if (filters.safeMode) {
       queryParts.push('-has:links -has:mentions');
       queryParts.push('lang:en');
     }
 
     const query = queryParts.join(' ');
-    console.log('Final query:', query);
+    console.log('Final Twitter API query:', query);
 
     // Fetch tweets
     const response = await appClient.v2.search(query, {
@@ -64,32 +65,32 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       'user.fields': ['verified', 'public_metrics', 'username'],
     });
 
-    if (!response.data.data) {
+    console.log('Raw Twitter API response:', response);
+
+    if (!response.data?.data) {
       console.log('No tweets found for query');
       return [];
     }
 
-    // Filter tweets based on criteria
     const tweets = response.data.data;
     const users = response.data.includes?.users || [];
 
+    // Filter tweets
     const filteredTweets = tweets.filter(tweet => {
       const author = users.find(u => u.id === tweet.author_id);
+      if (!author) {
+        console.log(`No author found for tweet ${tweet.id}`);
+        return false;
+      }
 
-      // Skip if we can't find author info
-      if (!author) return false;
-
-      // Check minimum followers if specified
       if (filters.minFollowers && author.public_metrics?.followers_count) {
         if (author.public_metrics.followers_count < filters.minFollowers) {
           return false;
         }
       }
 
-      // Additional content filtering in safe mode
       if (filters.safeMode) {
         const lowercaseText = tweet.text.toLowerCase();
-        // Basic profanity check (expand this list as needed)
         const profanityList = ['fuck', 'shit', 'damn', 'ass'];
         if (profanityList.some(word => lowercaseText.includes(word))) {
           return false;
@@ -99,24 +100,36 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       return true;
     });
 
-    // Add author username to tweet objects
+    // Process tweets
     const processedTweets = filteredTweets.map(tweet => {
       const author = users.find(u => u.id === tweet.author_id);
       return {
-        ...tweet,
-        author_username: author?.username
+        id: tweet.id,
+        text: tweet.text,
+        author_username: author?.username,
+        created_at: tweet.created_at || new Date().toISOString(),
+        public_metrics: tweet.public_metrics || {
+          retweet_count: 0,
+          reply_count: 0,
+          like_count: 0,
+          quote_count: 0
+        }
       };
     });
 
-    // Sort tweets by creation date
+    // Sort by date
     processedTweets.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    console.log('Total tweets found:', processedTweets.length);
+    console.log(`Found ${processedTweets.length} processed tweets`);
     return processedTweets;
+
   } catch (error) {
-    console.error('Error details:', error);
-    throw new Error('Failed to fetch tweets');
+    console.error('Twitter API error:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch tweets: ${error.message}`);
+    }
+    throw new Error('Failed to fetch tweets: Unknown error');
   }
 }

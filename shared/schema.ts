@@ -2,6 +2,29 @@ import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define Tweet-related schemas
+export type TweetFilters = {
+  verifiedOnly: boolean;
+  minFollowers: number;
+  excludeReplies: boolean;
+  excludeRetweets: boolean;
+  safeMode: boolean;
+  newsOutlets: string[];
+};
+
+export type Tweet = {
+  id: string;
+  text: string;
+  author_username: string;
+  created_at: string;
+  public_metrics: {
+    retweet_count: number;
+    reply_count: number;
+    like_count: number;
+    quote_count: number;
+  };
+};
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -35,6 +58,15 @@ export const newsletters = pgTable("newsletters", {
   sentAt: timestamp("sent_at"),
   totalRecipients: integer("total_recipients").default(0),
   deliveryStatus: text("delivery_status").default('pending'),
+  tweetContent: json("tweet_content").$type<Tweet[]>().array().default([]),
+  tweetFilters: json("tweet_filters").$type<TweetFilters>().default({
+    verifiedOnly: false,
+    minFollowers: 0,
+    excludeReplies: false,
+    excludeRetweets: false,
+    safeMode: true,
+    newsOutlets: []
+  })
 });
 
 export const analyticsEvents = pgTable("analytics_events", {
@@ -90,7 +122,15 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   keywords: true,
 }).extend({
   templateId: z.number(),
-  keywords: z.array(z.string())
+  keywords: z.array(z.string()),
+  tweetFilters: z.object({
+    verifiedOnly: z.boolean().optional(),
+    minFollowers: z.number().optional(),
+    excludeReplies: z.boolean().optional(),
+    excludeRetweets: z.boolean().optional(),
+    safeMode: z.boolean().optional(),
+    newsOutlets: z.array(z.string()).optional()
+  }).optional()
 });
 
 export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).pick({
