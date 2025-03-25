@@ -118,6 +118,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateNewsletter(parseInt(req.params.id), {
         templateId: parsed.data.templateId,
         keywords: parsed.data.keywords,
+        tweetFilters: parsed.data.tweetFilters || {
+          verifiedOnly: false,
+          minFollowers: 0,
+          excludeReplies: false,
+          excludeRetweets: false,
+          safeMode: true,
+          newsOutlets: [],
+          followerThreshold: 'low',
+          accountTypes: []
+        }
       });
 
       res.json(updated);
