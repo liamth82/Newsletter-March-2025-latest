@@ -25,7 +25,7 @@ export default function Dashboard() {
   };
 
   const handleEdit = (newsletter: Newsletter) => {
-    setEditingNewsletter(newsletter);
+    setEditingNewsletter({...newsletter}); // Create a copy of the newsletter
     setDialogOpen(true);
   };
 

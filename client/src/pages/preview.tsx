@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ interface FetchTweetsPayload {
 export default function Preview() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const [_, setLocation] = useLocation();
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
@@ -185,7 +186,7 @@ export default function Preview() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => window.history.back()}>
+              <Button variant="outline" onClick={() => setLocation('/')}>
                 Back
               </Button>
               <Button
