@@ -25,7 +25,7 @@ export default function Dashboard() {
   };
 
   const handleEdit = (newsletter: Newsletter) => {
-    setEditingNewsletter({...newsletter}); // Create a copy of the newsletter
+    setEditingNewsletter(newsletter);
     setDialogOpen(true);
   };
 
@@ -60,7 +60,7 @@ export default function Dashboard() {
               <Card key={newsletter.id}>
                 <CardHeader>
                   <CardTitle className="flex justify-between items-center">
-                    Newsletter #{newsletter.id}
+                    {newsletter.name}
                     <Badge
                       variant={newsletter.status === "draft" ? "secondary" : "default"}
                     >

@@ -72,8 +72,13 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       const responseData = await res.json();
       return responseData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
+    onSuccess: (updatedNewsletter) => {
+      // Update both the list and individual newsletter queries
+      queryClient.setQueryData(["/api/newsletters"], (oldData: Newsletter[] = []) => {
+        return oldData.map(n => n.id === updatedNewsletter.id ? updatedNewsletter : n);
+      });
+      queryClient.setQueryData([`/api/newsletters/${updatedNewsletter.id}`], updatedNewsletter);
+
       toast({
         title: "Success",
         description: newsletter ? "Newsletter updated successfully" : "Newsletter created successfully",
