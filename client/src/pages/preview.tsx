@@ -89,7 +89,7 @@ export default function Preview() {
     );
   }
 
-  if (!newsletter || !template) {
+  if (!newsletter || !template || !template.content) {
     return (
       <div className="flex min-h-screen">
         <SidebarNav />
@@ -116,7 +116,7 @@ export default function Preview() {
     : '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
 
   // Process template content with Handlebars-like replacements
-  let processedContent = template.content || '';
+  let processedContent = template.content;
 
   // Replace newsletter title
   processedContent = processedContent.replace(
@@ -169,6 +169,9 @@ export default function Preview() {
       .logo {
         max-height: 50px;
         width: auto;
+      }
+      .prose {
+        max-width: none;
       }
     </style>
   `;
