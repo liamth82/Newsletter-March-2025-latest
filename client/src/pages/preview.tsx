@@ -103,18 +103,20 @@ export default function Preview() {
   }
 
   // Generate tweet content before processing template
-  const tweetContent = generateNarrativeSummary(
-    newsletter.tweetContent || [],
-    newsletter.narrativeSettings || {
-      style: 'professional',
-      tone: 'formal',
-      wordCount: 300,
-      paragraphCount: 6
-    }
-  );
+  const tweetContent = newsletter.tweetContent && newsletter.tweetContent.length > 0
+    ? generateNarrativeSummary(
+        newsletter.tweetContent,
+        newsletter.narrativeSettings || {
+          style: 'professional',
+          tone: 'formal',
+          wordCount: 300,
+          paragraphCount: 6
+        }
+      )
+    : '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
 
   // Process template content with Handlebars-like replacements
-  let processedContent = template.content;
+  let processedContent = template.content || '';
 
   // Replace newsletter title
   processedContent = processedContent.replace(
@@ -134,15 +136,8 @@ export default function Preview() {
       /{{#each logos}}[\s\S]*?{{\/each}}/g,
       logoHtml
     );
-  } else {
-    // If no logos, remove the logo container
-    processedContent = processedContent.replace(
-      /<div class="logo-container">[\s\S]*?<\/div>/,
-      ''
-    );
   }
 
-  // Apply styles
   const styles = `
     <style>
       .newsletter-content {
