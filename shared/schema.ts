@@ -28,6 +28,14 @@ export type Tweet = {
   };
 };
 
+// Add NarrativeSettings type
+export type NarrativeSettings = {
+  style: 'professional' | 'casual' | 'storytelling';
+  tone: 'formal' | 'conversational';
+  wordCount: number;
+  paragraphCount: number;
+};
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -50,6 +58,7 @@ export const templates = pgTable("templates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Update Newsletter schema to include narrativeSettings
 export const newsletters = pgTable("newsletters", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -72,6 +81,12 @@ export const newsletters = pgTable("newsletters", {
     newsOutlets: [],
     followerThreshold: 'low',
     accountTypes: []
+  }),
+  narrativeSettings: json("narrative_settings").$type<NarrativeSettings>().default({
+    style: 'professional',
+    tone: 'formal',
+    wordCount: 300,
+    paragraphCount: 6
   })
 });
 

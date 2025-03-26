@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { type Newsletter, type Template, type NarrativeSettings as NarrativeSettingsType } from "@shared/schema";
+import { Newsletter, type Tweet, type NarrativeSettings, type Template } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,7 @@ export default function Preview() {
     mutationFn: async () => {
       if (!newsletter) throw new Error('Newsletter not found');
 
-      const filters: TweetFilters = newsletter.tweetFilters || {
+      const filters = newsletter.tweetFilters || {
         verifiedOnly: false,
         minFollowers: 0,
         excludeReplies: false,
@@ -50,7 +50,7 @@ export default function Preview() {
       const requestData: FetchTweetsPayload = {
         keywords: newsletter.keywords,
         ...filters,
-        newsOutlets: filters.newsOutlets.map((outlet: string) => {
+        newsOutlets: filters.newsOutlets.map(outlet => {
           const match = outlet.match(/(?:x\.com\/|twitter\.com\/)([^\/]+)/);
           return match ? match[1] : outlet.replace(/^@/, '');
         })
@@ -104,11 +104,11 @@ export default function Preview() {
 
   // Generate tweet content before processing template
   const tweetContent = generateNarrativeSummary(
-    newsletter.tweetContent,
+    newsletter.tweetContent || [],
     newsletter.narrativeSettings || {
       style: 'professional',
-      wordCount: 300,
       tone: 'formal',
+      wordCount: 300,
       paragraphCount: 6
     }
   );
@@ -119,7 +119,7 @@ export default function Preview() {
   // Replace newsletter title
   processedContent = processedContent.replace(
     /{{newsletter_title}}/g,
-    template.defaultTitle || 'Newsletter Preview'
+    newsletter.name || 'Newsletter Preview'
   );
 
   // Replace tweets placeholder with generated content
@@ -128,7 +128,7 @@ export default function Preview() {
   // Handle logos section
   if (template.logos?.length) {
     const logoHtml = template.logos
-      .map(logo => `<img src="${logo}" alt="Logo" class="logo" />`)
+      .map((logo: string) => `<img src="${logo}" alt="Logo" class="logo" />`)
       .join('');
     processedContent = processedContent.replace(
       /{{#each logos}}[\s\S]*?{{\/each}}/g,
@@ -218,7 +218,7 @@ export default function Preview() {
 }
 
 // Helper function to generate narrative content from tweets
-function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType) {
+function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings): string {
   if (!tweets || tweets.length === 0) {
     return '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
   }
@@ -236,7 +236,7 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType
     }))
     .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  const transitions: Record<NarrativeSettingsType['style'], string[]> = {
+  const transitions: Record<NarrativeSettings['style'], string[]> = {
     professional: [
       "Furthermore, %author% indicates that",
       "According to %author%'s analysis,",
@@ -257,19 +257,19 @@ function generateNarrativeSummary(tweets: any[], settings: NarrativeSettingsType
     ]
   };
 
-  const openings: Record<NarrativeSettingsType['style'], string> = {
+  const openings: Record<NarrativeSettings['style'], string> = {
     professional: "In recent developments, %author% reports that",
     casual: "Here's what's new: %author% tells us that",
     storytelling: "Our story begins as %author% reveals that"
   };
 
-  const conclusions: Record<NarrativeSettingsType['style'], string> = {
+  const conclusions: Record<NarrativeSettings['style'], string> = {
     professional: "Finally, %author% concludes that",
     casual: "To wrap things up, %author% adds that",
     storytelling: "The story concludes as %author% shares that"
   };
 
-  const getTransition = (style: NarrativeSettingsType['style'], index: number) => {
+  const getTransition = (style: NarrativeSettings['style'], index: number) => {
     return transitions[style][index % transitions[style].length];
   };
 
