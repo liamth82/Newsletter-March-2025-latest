@@ -46,7 +46,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: any) => {
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
 
@@ -54,7 +54,16 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         templateId: parseInt(String(data.templateId)),
         name: data.name,
         keywords: data.keywords || [],
-        tweetFilters: data.tweetFilters
+        tweetFilters: {
+          verifiedOnly: data.tweetFilters.verifiedOnly ?? false,
+          minFollowers: data.tweetFilters.minFollowers ?? 0,
+          excludeReplies: data.tweetFilters.excludeReplies ?? false,
+          excludeRetweets: data.tweetFilters.excludeRetweets ?? false,
+          safeMode: data.tweetFilters.safeMode ?? true,
+          newsOutlets: data.tweetFilters.newsOutlets ?? [],
+          followerThreshold: data.tweetFilters.followerThreshold ?? 'low',
+          accountTypes: data.tweetFilters.accountTypes ?? []
+        }
       };
 
       const res = await apiRequest(method, url, payload);
@@ -69,13 +78,16 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         }
       }
 
-      const responseData = await res.json();
-      return responseData;
+      return await res.json();
     },
     onSuccess: (updatedNewsletter) => {
       // Update both the list and individual newsletter queries
       queryClient.setQueryData(["/api/newsletters"], (oldData: Newsletter[] = []) => {
-        return oldData.map(n => n.id === updatedNewsletter.id ? updatedNewsletter : n);
+        if (newsletter) {
+          return oldData.map(n => n.id === updatedNewsletter.id ? updatedNewsletter : n);
+        } else {
+          return [...oldData, updatedNewsletter];
+        }
       });
       queryClient.setQueryData([`/api/newsletters/${updatedNewsletter.id}`], updatedNewsletter);
 
