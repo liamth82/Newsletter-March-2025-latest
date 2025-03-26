@@ -5,6 +5,7 @@ import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { KeywordManager } from "./keyword-manager";
 import { TweetFiltersControl } from "./tweet-filters";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +30,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     resolver: zodResolver(insertNewsletterSchema),
     defaultValues: {
       templateId: newsletter?.templateId || undefined,
+      name: newsletter?.name || 'Untitled Newsletter',
       keywords: newsletter?.keywords || [],
       tweetFilters: newsletter?.tweetFilters || {
         verifiedOnly: false,
@@ -50,6 +52,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
 
       const payload = {
         templateId: parseInt(String(data.templateId)),
+        name: data.name,
         keywords: data.keywords || [],
         tweetFilters: data.tweetFilters
       };
@@ -97,6 +100,20 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Newsletter Name</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Enter newsletter name" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <Tabs defaultValue="content" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="content">Content</TabsTrigger>

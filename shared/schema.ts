@@ -54,6 +54,7 @@ export const newsletters = pgTable("newsletters", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   templateId: integer("template_id").notNull(),
+  name: text("name").notNull().default('Untitled Newsletter'),
   keywords: text("keywords").array().notNull(),
   scheduleTime: timestamp("schedule_time"),
   status: text("status").notNull().default('draft'),
@@ -125,9 +126,11 @@ export const insertTemplateSchema = createInsertSchema(templates).pick({
 export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
   templateId: true,
   keywords: true,
+  name: true,
 }).extend({
   templateId: z.number(),
   keywords: z.array(z.string()),
+  name: z.string().min(1, "Newsletter name is required"),
   tweetFilters: z.object({
     verifiedOnly: z.boolean().optional(),
     minFollowers: z.number().optional(),

@@ -117,6 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updated = await storage.updateNewsletter(parseInt(req.params.id), {
         templateId: parsed.data.templateId,
+        name: parsed.data.name,
         keywords: parsed.data.keywords,
         tweetFilters: parsed.data.tweetFilters || {
           verifiedOnly: false,
