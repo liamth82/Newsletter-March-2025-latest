@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,11 @@ import { KeywordManager } from "./keyword-manager";
 import { TweetFiltersControl } from "./tweet-filters";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NewsletterFormProps {
   onSuccess: () => void;
@@ -21,6 +23,8 @@ interface NewsletterFormProps {
 
 export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const { data: templates } = useQuery<Template[]>({
     queryKey: ["/api/templates"],
@@ -45,10 +49,33 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
     }
   });
 
+  // This effect ensures we update the form when the newsletter prop changes
+  useEffect(() => {
+    if (newsletter) {
+      form.reset({
+        templateId: newsletter.templateId,
+        name: newsletter.name,
+        keywords: newsletter.keywords || [],
+        tweetFilters: newsletter.tweetFilters || {
+          verifiedOnly: false,
+          minFollowers: 0,
+          excludeReplies: false,
+          excludeRetweets: false,
+          safeMode: true,
+          newsOutlets: [],
+          followerThreshold: 'low' as 'low' | 'medium' | 'high',
+          accountTypes: []
+        }
+      });
+    }
+  }, [newsletter, form]);
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const method = newsletter ? "PATCH" : "POST";
       const url = newsletter ? `/api/newsletters/${newsletter.id}` : "/api/newsletters";
+
+      console.log("Saving newsletter with data:", data);
 
       const payload = {
         templateId: parseInt(String(data.templateId)),
@@ -81,15 +108,14 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       return await res.json();
     },
     onSuccess: (updatedNewsletter) => {
-      // Update both the list and individual newsletter queries
-      queryClient.setQueryData(["/api/newsletters"], (oldData: Newsletter[] = []) => {
-        if (newsletter) {
-          return oldData.map(n => n.id === updatedNewsletter.id ? updatedNewsletter : n);
-        } else {
-          return [...oldData, updatedNewsletter];
-        }
-      });
-      queryClient.setQueryData([`/api/newsletters/${updatedNewsletter.id}`], updatedNewsletter);
+      // Invalidate the queries to ensure we get fresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/newsletters"] });
+      
+      if (newsletter) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/newsletters/${updatedNewsletter.id}`] 
+        });
+      }
 
       toast({
         title: "Success",
@@ -98,6 +124,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
       onSuccess();
     },
     onError: (error: Error) => {
+      console.error("Error saving newsletter:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -107,7 +134,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   });
 
   return (
-    <DialogContent className="sm:max-w-[625px]">
+    <DialogContent className={isMobile ? "w-[95vw] max-w-[625px] p-4" : "sm:max-w-[625px]"}>
       <DialogHeader>
         <DialogTitle>{newsletter ? "Edit Newsletter" : "Create Newsletter"}</DialogTitle>
         <DialogDescription>
@@ -195,8 +222,10 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                   <FormItem>
                     <FormControl>
                       <TweetFiltersControl
-                        onFiltersChange={field.onChange}
-                        initialFilters={field.value}
+                        onFiltersChange={(filters) => {
+                          field.onChange(filters as TweetFilters);
+                        }}
+                        initialFilters={field.value as TweetFilters}
                       />
                     </FormControl>
                     <FormMessage />
@@ -207,7 +236,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           </Tabs>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto">
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}

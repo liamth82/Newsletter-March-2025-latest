@@ -105,17 +105,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
+      console.log('Updating newsletter:', req.params.id);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
       const newsletter = await storage.getNewsletter(parseInt(req.params.id));
       if (!newsletter) {
+        console.log('Newsletter not found:', req.params.id);
         return res.status(404).json({ message: "Newsletter not found" });
       }
+      
+      console.log('Existing newsletter:', JSON.stringify(newsletter, null, 2));
 
       const parsed = insertNewsletterSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.log('Validation failed:', parsed.error);
         return res.status(400).json({ message: "Invalid newsletter data", errors: parsed.error });
       }
 
-      const updated = await storage.updateNewsletter(parseInt(req.params.id), {
+      const updateData = {
         templateId: parsed.data.templateId,
         name: parsed.data.name,
         keywords: parsed.data.keywords,
@@ -129,7 +136,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           followerThreshold: 'low',
           accountTypes: []
         }
-      });
+      };
+      
+      console.log('Updating with data:', JSON.stringify(updateData, null, 2));
+
+      const updated = await storage.updateNewsletter(parseInt(req.params.id), updateData);
+      console.log('Update successful, returned newsletter:', JSON.stringify(updated, null, 2));
 
       res.json(updated);
     } catch (error) {

@@ -42,7 +42,7 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
     }
   }, [initialFilters]);
 
-  const handleFilterChange = (key: keyof TweetFilters, value: any) => {
+  const handleFilterChange = <K extends keyof TweetFilters>(key: K, value: TweetFilters[K]) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     onFiltersChange(newFilters);
@@ -96,9 +96,10 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
           <Label className="text-base font-semibold">Follower Threshold</Label>
           <Select
             defaultValue={filters.followerThreshold}
-            onValueChange={(value: keyof typeof FOLLOWER_THRESHOLDS) => {
-              handleFilterChange('followerThreshold', value);
-              handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[value]);
+            onValueChange={(value) => {
+              const typedValue = value as 'low' | 'medium' | 'high';
+              handleFilterChange('followerThreshold', typedValue);
+              handleFilterChange('minFollowers', FOLLOWER_THRESHOLDS[typedValue]);
             }}
           >
             <SelectTrigger>

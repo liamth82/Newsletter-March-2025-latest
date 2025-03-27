@@ -2,18 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw, Edit } from "lucide-react";
+import { Plus, RefreshCw, Edit, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { Dialog } from "@/components/ui/dialog";
 import { Newsletter } from "@shared/schema";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNewsletter, setEditingNewsletter] = useState<Newsletter | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: newsletters, isLoading } = useQuery<Newsletter[]>({
     queryKey: ["/api/newsletters"],
@@ -35,12 +38,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col lg:flex-row">
       <SidebarNav />
-      <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Newsletters</h1>
-          <Button onClick={handleCreate}>
+      <main className={`flex-1 p-4 md:p-6 ${isMobile ? 'mt-16' : ''}`}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">Newsletters</h1>
+          <Button onClick={handleCreate} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Create Newsletter
           </Button>
@@ -58,11 +61,12 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {newsletters?.map((newsletter) => (
               <Card key={newsletter.id}>
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-center">
-                    {newsletter.name}
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex flex-wrap justify-between items-center gap-2">
+                    <span className="text-ellipsis overflow-hidden">{newsletter.name}</span>
                     <Badge
                       variant={newsletter.status === "draft" ? "secondary" : "default"}
+                      className="shrink-0"
                     >
                       {newsletter.status}
                     </Badge>
@@ -71,26 +75,30 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
-                      {newsletter.keywords.map((keyword, i) => (
-                        <Badge key={i} variant="outline">
+                      {newsletter.keywords.slice(0, isMobile ? 3 : 6).map((keyword, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">
                           {keyword}
                         </Badge>
                       ))}
+                      {newsletter.keywords.length > (isMobile ? 3 : 6) && (
+                        <Badge variant="outline" className="text-xs">
+                          +{newsletter.keywords.length - (isMobile ? 3 : 6)} more
+                        </Badge>
+                      )}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      Scheduled for:{" "}
+                    <div className="text-xs sm:text-sm text-muted-foreground">
                       {newsletter.scheduleTime
-                        ? new Date(newsletter.scheduleTime).toLocaleString()
+                        ? `Scheduled: ${new Date(newsletter.scheduleTime).toLocaleDateString()}`
                         : "Not scheduled"}
                     </div>
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="flex flex-wrap justify-end gap-2 mt-4">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(newsletter)}
                       >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        <Edit className="h-4 w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Edit</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -102,17 +110,15 @@ export default function Dashboard() {
                           });
                         }}
                       >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh
+                        <RefreshCw className="h-4 w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Refresh</span>
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          window.location.href = `/preview/${newsletter.id}`;
-                        }}
-                      >
-                        Preview
-                      </Button>
+                      <Link href={`/preview/${newsletter.id}`}>
+                        <Button size="sm">
+                          <Eye className="h-4 w-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Preview</span>
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </CardContent>
