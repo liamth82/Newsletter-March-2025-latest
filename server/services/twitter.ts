@@ -105,6 +105,11 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       if (filters.newsOutlets && filters.newsOutlets.length > 0) {
         sectorHandles = [...filters.newsOutlets];
         console.log(`Using ${sectorHandles.length} handles from sector`);
+        
+        // Make sure newsOutlets is set properly for downstream processing
+        filters.newsOutlets = sectorHandles;
+      } else {
+        console.warn(`Sector ID ${filters.sectorId} was provided but no handles were found`);
       }
     }
 

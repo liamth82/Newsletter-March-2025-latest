@@ -76,11 +76,8 @@ export function PreDefinedSectorsDialog({
             tweetFilters: {
               ...(currentFormState.tweetFilters || {}),
               sectorId: createdSector.id,
-              // Also include the handles from the sector
-              newsOutlets: [
-                ...(currentFormState.tweetFilters?.newsOutlets || []),
-                ...createdSector.handles
-              ]
+              // Use only the handles from the sector
+              newsOutlets: [...createdSector.handles]
             }
           };
           

@@ -202,10 +202,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
                        req.body.keywords.length > 0 &&
                        !(req.body.keywords.length === 1 && (!req.body.keywords[0] || req.body.keywords[0].trim() === ''));
                        
-      const hasHandles = filters.newsOutlets.length > 0;
+      const hasHandles = filters.newsOutlets && filters.newsOutlets.length > 0;
+      const hasSectorId = !!filters.sectorId;
+      
+      console.log(`Search conditions: hasKeywords=${hasKeywords}, hasHandles=${hasHandles}, hasSectorId=${hasSectorId}`);
+      
+      // If we have a sectorId but no handles, try to fetch the handles for that sector
+      if (hasSectorId && !hasHandles) {
+        try {
+          const sector = await storage.getSector(filters.sectorId);
+          if (sector && sector.handles && sector.handles.length > 0) {
+            filters.newsOutlets = sector.handles;
+            console.log(`Loaded ${filters.newsOutlets.length} handles from sector ${sector.name}`);
+          }
+        } catch (error) {
+          console.error('Error loading sector handles:', error);
+        }
+      }
+      
+      // Re-check handles after potentially loading them from sector
+      const finalHasHandles = filters.newsOutlets && filters.newsOutlets.length > 0;
       
       // If we have neither keywords nor handles, return an error
-      if (!hasKeywords && !hasHandles) {
+      if (!hasKeywords && !finalHasHandles) {
         return res.status(400).json({ 
           message: "Please provide at least one keyword or select a sector with handles"
         });

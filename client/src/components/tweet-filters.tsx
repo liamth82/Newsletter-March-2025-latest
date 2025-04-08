@@ -100,30 +100,42 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
         <div className="space-y-2">
           <Label className="text-base font-semibold">Industry Sector</Label>
           <div className="text-sm text-muted-foreground mb-2">
-            Select a specific industry sector to use curated Twitter handles
+            Select a specific industry sector to automatically use its curated Twitter handles
           </div>
-          {sectors.length > 0 ? (
-            <Select 
-              value={filters.sectorId?.toString() || "none"}
-              onValueChange={handleSectorSelect}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a sector" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None (use keywords only)</SelectItem>
-                {sectors.map((sector) => (
-                  <SelectItem key={sector.id} value={sector.id.toString()}>
-                    {sector.name} ({sector.handles.length} handles)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="text-sm text-muted-foreground">
-              No sectors available. Create sectors in the Sectors page.
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            {sectors.length > 0 ? (
+              <Select 
+                value={filters.sectorId?.toString() || "none"}
+                onValueChange={handleSectorSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a sector" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (use keywords only)</SelectItem>
+                  {sectors.map((sector) => (
+                    <SelectItem key={sector.id} value={sector.id.toString()}>
+                      {sector.name} ({sector.handles.length} handles)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No sectors available. Create sectors in the Sectors page.
+              </div>
+            )}
+            
+            {filters.sectorId && (
+              <div className="flex items-center gap-2 text-sm py-2 px-3 rounded-md bg-muted">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>
+                  <span className="font-medium">Active sector:</span> {sectors.find(s => s.id === filters.sectorId)?.name} 
+                  (using {sectors.find(s => s.id === filters.sectorId)?.handles.length} handles)
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="space-y-2">
@@ -167,15 +179,22 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
         </div>
 
         <div className="space-y-2">
-          <Label className="text-base font-semibold">Trusted News Sources</Label>
+          <Label className="text-base font-semibold">Additional Twitter Handles</Label>
           <div className="text-sm text-muted-foreground mb-2">
-            Add Twitter handles of trusted news outlets or import from a sector
+            {filters.sectorId ? (
+              <span>
+                <span className="font-medium">Note:</span> Your selected sector handles are automatically included.
+                Add any additional handles below if needed.
+              </span>
+            ) : (
+              <span>Add specific Twitter handles to include in your search results</span>
+            )}
           </div>
-          {sectors.length > 0 && (
+          {sectors.length > 0 && !filters.sectorId && (
             <div className="flex gap-2 mb-4">
               <Select onValueChange={handleImportSector}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Import from sector..." />
+                  <SelectValue placeholder="Import handles from sector..." />
                 </SelectTrigger>
                 <SelectContent>
                   {sectors.map((sector) => (
