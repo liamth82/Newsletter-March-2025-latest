@@ -418,6 +418,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all pre-defined sector templates (without creating them)
+  // This must be placed before the :id route to avoid conflict
+  app.get("/api/sectors/pre-defined", async (req, res) => {
+    // This endpoint does not require authentication as it only returns templates
+    const preDefinedSectors = getDefaultSectors();
+    res.json(preDefinedSectors);
+  });
+
   app.get("/api/sectors", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const sectors = await storage.getSectors(req.user.id);
@@ -465,13 +473,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     await storage.deleteSector(parseInt(req.params.id));
     res.sendStatus(204);
-  });
-  
-  // Get all pre-defined sector templates (without creating them)
-  app.get("/api/sectors/pre-defined", async (req, res) => {
-    // This endpoint does not require authentication as it only returns templates
-    const preDefinedSectors = getDefaultSectors();
-    res.json(preDefinedSectors);
   });
   
 
