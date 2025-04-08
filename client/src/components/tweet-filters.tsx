@@ -75,14 +75,23 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
     if (sector) {
       console.log(`Selected sector: ${sector.name} (ID: ${sector.id})`);
       
-      // Set the sector ID
-      handleFilterChange('sectorId', sectorIdNum);
+      // Set the sector ID in a separate update to ensure it's not lost
+      const sectorUpdate = { ...filters, sectorId: sectorIdNum };
+      setFilters(sectorUpdate);
       
       // Also apply the handles from this sector
       if (sector.handles && sector.handles.length > 0) {
-        // Merge with existing handles to preserve manual additions
-        const uniqueHandles = Array.from(new Set([...filters.newsOutlets, ...sector.handles]));
-        handleFilterChange('newsOutlets', uniqueHandles);
+        // Replace existing handles with sector handles for clarity
+        const newFilters = { 
+          ...sectorUpdate, 
+          newsOutlets: [...sector.handles] 
+        };
+        
+        setFilters(newFilters);
+        onFiltersChange(newFilters);
+      } else {
+        // If no handles in sector, at least update the sectorId
+        onFiltersChange(sectorUpdate);
       }
     }
   };
@@ -139,20 +148,31 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
             
             <Card className={`border-2 ${filters.sectorId ? 'border-primary' : 'border-muted'} cursor-pointer transition-all hover:shadow-md`}
               onClick={() => {
-                // Show sector selection
-                setShowSectorSelection(true);
+                if (filters.sectorId) {
+                  // If sector already selected, show the selection dialog to modify
+                  setShowSectorSelection(true);
+                } else {
+                  // Otherwise, just show the sector selection
+                  setShowSectorSelection(true);
+                }
               }}
             >
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   {filters.sectorId && <CheckCircle className="h-4 w-4 text-primary" />}
-                  Use Industry Sector
+                  Use Industry Sector {filters.sectorId ? `(${sectors.find(s => s.id === filters.sectorId)?.name})` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Follow specific Twitter accounts from a curated industry sector, with or without keywords.
                 </p>
+                {filters.sectorId && (
+                  <div className="mt-2 text-xs text-primary-foreground">
+                    <Badge variant="default" className="mr-1">Active</Badge>
+                    Using {sectors.find(s => s.id === filters.sectorId)?.handles.length} handles from this sector
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

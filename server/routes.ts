@@ -248,9 +248,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Update newsletter
+      // Update newsletter with tweets and preserve the sectorId in tweetFilters
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
-        tweetContent: tweets
+        tweetContent: tweets,
+        // Save the filters too to ensure sectorId is preserved
+        tweetFilters: {
+          ...filters,
+          // Ensure the sectorId is explicitly included
+          sectorId: filters.sectorId !== undefined ? filters.sectorId : undefined
+        }
       });
 
       res.json(newsletter);

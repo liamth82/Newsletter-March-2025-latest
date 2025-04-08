@@ -94,7 +94,7 @@ const calculateQualityScore = (tweet: any, author: any): number => {
 
 export async function searchTweets(keywords: string[], filters: TweetFilters = {}) {
   try {
-    console.log('Starting tweet search with:', { keywords, filters });
+    console.log('Starting tweet search with:', { keywords, filters, sectorId: filters.sectorId });
 
     // If a sector is selected, we should use its handles by default
     let sectorHandles: string[] = [];
@@ -109,7 +109,14 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
         // Make sure newsOutlets is set properly for downstream processing
         filters.newsOutlets = sectorHandles;
       } else {
-        console.warn(`Sector ID ${filters.sectorId} was provided but no handles were found`);
+        console.warn(`Sector ID ${filters.sectorId} was provided but no handles were found. This should never happen.`);
+        
+        // Since we have a sectorId but no handles, this is likely a data integrity issue
+        // Let's log this as a critical error to help with debugging
+        console.error(`CRITICAL: Sector ID ${filters.sectorId} has no associated handles in the filters`);
+        
+        // Return early to avoid showing incorrect results
+        throw new Error(`Sector ID ${filters.sectorId} has no associated handles. Please edit the sector or try again.`);
       }
     }
 
