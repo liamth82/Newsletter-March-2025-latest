@@ -53,10 +53,25 @@ export default function Preview() {
         sectorId: undefined
       };
 
+      // If we have a sectorId but no sector handles in the UI, fetch them
+      if (filters.sectorId && (!filters.newsOutlets || filters.newsOutlets.length === 0)) {
+        try {
+          const sectorResponse = await fetch(`/api/sectors/${filters.sectorId}`);
+          if (sectorResponse.ok) {
+            const sectorData = await sectorResponse.json();
+            if (sectorData.handles && sectorData.handles.length > 0) {
+              filters.newsOutlets = sectorData.handles;
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching sector handles:", error);
+        }
+      }
+
       const requestData: FetchTweetsPayload = {
         keywords: newsletter.keywords,
         ...filters,
-        newsOutlets: filters.newsOutlets.map(outlet => {
+        newsOutlets: (filters.newsOutlets || []).map(outlet => {
           const match = outlet.match(/(?:x\.com\/|twitter\.com\/)([^\/]+)/);
           return match ? match[1] : outlet.replace(/^@/, '');
         })

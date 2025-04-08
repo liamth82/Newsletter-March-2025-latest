@@ -103,11 +103,7 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       
       // Get sector handles from the database if available
       try {
-        // The storage implementation should handle this - we're just logging
-        console.log(`Using handles from sector ID: ${filters.sectorId}`);
-        
-        // In a real implementation, we would fetch sector handles from database
-        // For now, we can add this when sector-specific handles are passed via newsOutlets
+        // This code uses sector handles that were passed through from the frontend
         if (filters.newsOutlets && filters.newsOutlets.length > 0) {
           sectorHandles = [...filters.newsOutlets];
           console.log(`Using ${sectorHandles.length} handles from sector`);

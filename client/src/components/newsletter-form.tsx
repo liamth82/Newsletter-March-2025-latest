@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { insertNewsletterSchema, type Newsletter, type Template } from "@shared/schema";
+import { insertNewsletterSchema, type Newsletter, type Template, type TweetFilters } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,7 +44,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
         safeMode: true,
         newsOutlets: [],
         followerThreshold: 'low',
-        accountTypes: []
+        accountTypes: [],
+        sectorId: undefined
       }
     }
   });
@@ -64,7 +65,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           safeMode: true,
           newsOutlets: [],
           followerThreshold: 'low' as 'low' | 'medium' | 'high',
-          accountTypes: []
+          accountTypes: [],
+          sectorId: undefined
         }
       });
     }
@@ -89,7 +91,8 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           safeMode: data.tweetFilters.safeMode ?? true,
           newsOutlets: data.tweetFilters.newsOutlets ?? [],
           followerThreshold: data.tweetFilters.followerThreshold ?? 'low',
-          accountTypes: data.tweetFilters.accountTypes ?? []
+          accountTypes: data.tweetFilters.accountTypes ?? [],
+          sectorId: data.tweetFilters.sectorId || undefined
         }
       };
 
