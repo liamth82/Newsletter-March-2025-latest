@@ -63,9 +63,20 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
       return;
     }
     
-    const sector = sectors.find(s => s.id === parseInt(sectorId));
+    const sectorIdNum = parseInt(sectorId);
+    const sector = sectors.find(s => s.id === sectorIdNum);
     if (sector) {
-      handleFilterChange('sectorId', sector.id);
+      console.log(`Selected sector: ${sector.name} (ID: ${sector.id})`);
+      
+      // Set the sector ID
+      handleFilterChange('sectorId', sectorIdNum);
+      
+      // Also apply the handles from this sector
+      if (sector.handles && sector.handles.length > 0) {
+        // Merge with existing handles to preserve manual additions
+        const uniqueHandles = Array.from(new Set([...filters.newsOutlets, ...sector.handles]));
+        handleFilterChange('newsOutlets', uniqueHandles);
+      }
     }
   };
 

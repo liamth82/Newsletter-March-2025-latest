@@ -65,15 +65,34 @@ export function PreDefinedSectorsDialog({
       if (createdSectors && createdSectors.length > 0) {
         // Get the current form values for newsletters if we're on the newsletter form
         const currentFormState = queryClient.getQueryData(['newsletterFormState']);
+        const createdSector = createdSectors[0];
+        
+        console.log("Created sector:", createdSector);
+        
         if (currentFormState) {
           // Update the newsletter form state with the new sector ID
-          queryClient.setQueryData(['newsletterFormState'], {
+          const updatedFormState = {
             ...currentFormState,
             tweetFilters: {
               ...(currentFormState.tweetFilters || {}),
-              sectorId: createdSectors[0].id
+              sectorId: createdSector.id,
+              // Also include the handles from the sector
+              newsOutlets: [
+                ...(currentFormState.tweetFilters?.newsOutlets || []),
+                ...createdSector.handles
+              ]
             }
-          });
+          };
+          
+          console.log("Updating newsletter form state with sector:", updatedFormState);
+          
+          queryClient.setQueryData(['newsletterFormState'], updatedFormState);
+          
+          // Force a rerender to make sure the sector selection dropdown updates
+          // This is needed because the newsletter form might not detect the change
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['newsletterFormState'] });
+          }, 100);
         }
       }
       

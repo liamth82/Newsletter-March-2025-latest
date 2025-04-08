@@ -180,6 +180,14 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       const fromQueries = filters.newsOutlets.map(handle => 
         `from:${handle.replace(/^@/, '').replace(/https?:\/\/(x|twitter)\.com\//, '')}`
       );
+      
+      // If we're using a sector without keywords, remove the keyword query part
+      if (keywords.length === 0 || keywords[0] === '') {
+        // Remove the keyword query (which would be empty or invalid)
+        queryParts.shift();
+        console.log("No keywords provided, using only sector handles for search");
+      }
+      
       queryParts.push(`(${fromQueries.join(' OR ')})`);
     }
 
