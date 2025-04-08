@@ -269,6 +269,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(event);
   });
 
+  // Helper function to get pre-defined sectors with Twitter handles
+  const getDefaultSectors = () => {
+    return [
+      {
+        name: "Tech News",
+        description: "Major technology news outlets and tech journalists",
+        handles: [
+          "WIRED", "TechCrunch", "TheVerge", "engadget", "mashable", 
+          "CNET", "techreview", "FastCompany", "ForbesTech", "BBCTech",
+          "WSJTech", "nytimesbits", "guardiantech", "ReutersTech", "FT"
+        ]
+      },
+      {
+        name: "Finance",
+        description: "Financial news, markets, and economic analysis",
+        handles: [
+          "Bloomberg", "WSJ", "BusinessInsider", "FT", "Forbes", 
+          "TheEconomist", "ReutersBiz", "CNNBusiness", "YahooFinance",
+          "markets", "MarketWatch", "CNBC", "businessweek", "nytimesbusiness"
+        ]
+      },
+      {
+        name: "Healthcare",
+        description: "Healthcare news, medical research, and health policy",
+        handles: [
+          "NEJM", "TheLancet", "statnews", "KHNews", "Reuters_Health",
+          "CDCgov", "WHO", "NIH", "HarvardHealth", "MayoClinic", 
+          "modrnhealth", "AmerMedicalAssn", "healthdotcom", "WebMD"
+        ]
+      },
+      {
+        name: "Sports",
+        description: "Sports news, analysis, and updates across major leagues",
+        handles: [
+          "espn", "SportsCenter", "NBA", "NFL", "MLB", 
+          "NHL", "FIFAcom", "BBCSport", "SInow", "CBSSports",
+          "NBCSports", "SkySports", "FOXSports", "GolfChannel", "F1"
+        ]
+      },
+      {
+        name: "Entertainment",
+        description: "Movies, TV, music, and celebrity news",
+        handles: [
+          "Variety", "THR", "EW", "ETonline", "usweekly", 
+          "vulture", "RottenTomatoes", "IMDb", "BBCEntertain", "MTV",
+          "netflix", "hulu", "PrimeVideo", "HBO", "Billboard"
+        ]
+      },
+      {
+        name: "Politics",
+        description: "Political news and analysis",
+        handles: [
+          "politico", "thehill", "axios", "NPR", "BBCPolitics", 
+          "FoxNews", "MSNBC", "CBSPolitics", "ABCPolitics", "CNNPolitics",
+          "nprpolitics", "nytpolitics", "WSJPolitics", "guardian"
+        ]
+      },
+      {
+        name: "Science",
+        description: "Scientific discoveries, research, and environmental news",
+        handles: [
+          "ScienceMagazine", "NatureMagazine", "sciam", "NewScientist", "NASA", 
+          "NOAAClimate", "NatGeo", "PopSci", "DiscoverMag", "ScienceDaily",
+          "physorg_com", "sciencenewsorg", "scifri", "guardianscience", "nytimesscience"
+        ]
+      },
+      {
+        name: "AI & ML",
+        description: "Artificial intelligence, machine learning, and data science",
+        handles: [
+          "DeepMind", "OpenAI", "GoogleAI", "AndrewYNg", "facebookai", 
+          "NvidiaAI", "Stanford_AI", "MIT_CSAIL", "TensorFlow", "PyTorch",
+          "IBMResearch", "MSFTResearch", "lexfridman", "huggingface", "distillpub"
+        ]
+      }
+    ];
+  };
+
   // Sectors
   app.post("/api/sectors", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -278,11 +356,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json(parsed.error);
     }
 
-    const sector = await storage.createSector({
+    // Ensure description is null if undefined to match schema
+    const sectorData = {
       ...parsed.data,
+      description: parsed.data.description ?? null,
       userId: req.user.id,
-    });
+    };
+
+    const sector = await storage.createSector(sectorData);
     res.status(201).json(sector);
+  });
+  
+  // Create default sectors for a user
+  app.post("/api/sectors/create-defaults", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const defaultSectors = getDefaultSectors();
+      const createdSectors = [];
+      
+      for (const sectorData of defaultSectors) {
+        const sector = await storage.createSector({
+          ...sectorData,
+          description: sectorData.description ?? null,
+          userId: req.user.id,
+        });
+        createdSectors.push(sector);
+      }
+      
+      res.status(201).json(createdSectors);
+    } catch (error) {
+      console.error("Error creating default sectors:", error);
+      res.status(500).json({ message: "Failed to create default sectors" });
+    }
   });
 
   app.get("/api/sectors", async (req, res) => {
@@ -334,61 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendStatus(204);
   });
   
-  // Create default predefined sectors for existing users
-  app.post("/api/sectors/create-defaults", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      // Finance Sector
-      await storage.createSector({
-        userId: req.user.id,
-        name: "Finance",
-        description: "Financial news and market updates from trusted sources",
-        handles: [
-          "WSJ", "Bloomberg", "Forbes", "BusinessInsider", "TheEconomist", 
-          "FT", "CNBCnow", "YahooFinance", "MarketWatch", "ReutersBiz"
-        ]
-      });
 
-      // Technology Sector
-      await storage.createSector({
-        userId: req.user.id,
-        name: "Technology",
-        description: "Latest technology news and updates from industry leaders",
-        handles: [
-          "WIRED", "TechCrunch", "verge", "engadget", "mashable", 
-          "techreview", "CNBC", "ForbesTech", "BBCTech", "HackerNews"
-        ]
-      });
-
-      // Healthcare Sector
-      await storage.createSector({
-        userId: req.user.id,
-        name: "Healthcare",
-        description: "Healthcare news and medical research updates",
-        handles: [
-          "WHO", "CDCgov", "statnews", "NEJM", "KHNews", 
-          "NIH", "NYTHealth", "Reuters_Health", "Medscape", "WebMD"
-        ]
-      });
-      
-      // Environmental Sector
-      await storage.createSector({
-        userId: req.user.id,
-        name: "Environment",
-        description: "Climate change and environmental news from authoritative sources",
-        handles: [
-          "NatGeo", "ClimateHome", "guardianeco", "insideclimate", "climate", 
-          "ClimateReality", "UNEP", "GreenpeaceUK", "WWF", "nature"
-        ]
-      });
-      
-      res.status(201).json({ message: "Default sectors created successfully" });
-    } catch (error) {
-      console.error("Error creating default sectors for existing user:", error);
-      res.status(500).json({ message: "Failed to create default sectors" });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;

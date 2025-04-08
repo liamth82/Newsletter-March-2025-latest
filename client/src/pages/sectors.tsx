@@ -155,21 +155,36 @@ export default function SectorsPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Sectors</h1>
           <div className="flex gap-2">
-            {sectors.length === 0 && (
-              <Button 
-                variant="outline" 
-                onClick={() => createDefaultSectorsMutation.mutate()}
-                disabled={createDefaultSectorsMutation.isPending}
-              >
-                {createDefaultSectorsMutation.isPending ? "Creating..." : "Create Default Sectors"}
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              onClick={() => createDefaultSectorsMutation.mutate()}
+              disabled={createDefaultSectorsMutation.isPending}
+            >
+              {createDefaultSectorsMutation.isPending ? "Creating..." : sectors.length === 0 ? "Create Default Sectors" : "Add Pre-made Sectors"}
+            </Button>
             <Button onClick={() => setIsOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Sector
+              Add Custom Sector
             </Button>
           </div>
         </div>
+        
+        {sectors.length === 0 && (
+          <div className="bg-muted p-6 rounded-lg mb-6">
+            <h2 className="text-xl font-semibold mb-2">Get Started with Pre-made Sectors</h2>
+            <p className="text-muted-foreground mb-4">
+              Sectors allow you to organize Twitter handles by industry for better content filtering. 
+              Add pre-made sectors with curated Twitter handles for popular industries like Tech, Finance, Healthcare, and more.
+            </p>
+            <Button 
+              onClick={() => createDefaultSectorsMutation.mutate()}
+              disabled={createDefaultSectorsMutation.isPending}
+              className="mt-2"
+            >
+              {createDefaultSectorsMutation.isPending ? "Creating..." : "Add Pre-made Sectors"}
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sectors.map((sector) => (
