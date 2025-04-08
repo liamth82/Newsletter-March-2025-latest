@@ -53,19 +53,30 @@ export default function Preview() {
         sectorId: undefined
       };
 
-      // If we have a sectorId but no sector handles in the UI, fetch them
-      if (filters.sectorId && (!filters.newsOutlets || filters.newsOutlets.length === 0)) {
+      // If we have a sectorId, fetch the sector handles
+      if (filters.sectorId) {
         try {
+          console.log(`Fetching handles for sector ID: ${filters.sectorId}`);
           const sectorResponse = await fetch(`/api/sectors/${filters.sectorId}`);
           if (sectorResponse.ok) {
             const sectorData = await sectorResponse.json();
+            console.log("Fetched sector data:", sectorData);
+            
             if (sectorData.handles && sectorData.handles.length > 0) {
+              console.log(`Found ${sectorData.handles.length} handles for sector`);
+              // Always use sector handles, they take priority
               filters.newsOutlets = sectorData.handles;
+            } else {
+              console.warn("No handles found for sector");
             }
+          } else {
+            console.error("Failed to fetch sector data:", await sectorResponse.text());
           }
         } catch (error) {
           console.error("Error fetching sector handles:", error);
         }
+      } else {
+        console.log("No sector ID specified in filters");
       }
 
       const requestData: FetchTweetsPayload = {

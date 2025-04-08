@@ -83,12 +83,20 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   useEffect(() => {
     const formState = queryClient.getQueryData(['newsletterFormState']);
     if (formState) {
-      // We need to update the form if the sector ID was changed by the pre-defined sectors dialog
-      if (formState.tweetFilters?.sectorId !== form.getValues().tweetFilters?.sectorId) {
-        form.setValue('tweetFilters', {
-          ...form.getValues().tweetFilters,
-          sectorId: formState.tweetFilters?.sectorId
-        });
+      console.log("Detected changes to form state:", formState);
+      
+      // Update the entire tweetFilters object to include everything
+      if (formState.tweetFilters) {
+        const currentFilters = form.getValues().tweetFilters || {};
+        
+        // Merge the existing filters with the new ones
+        const mergedFilters = {
+          ...currentFilters,
+          ...formState.tweetFilters
+        };
+        
+        console.log("Updating tweetFilters to:", mergedFilters);
+        form.setValue('tweetFilters', mergedFilters);
       }
     }
   }, [form, queryClient]);
@@ -100,22 +108,31 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
 
       console.log("Saving newsletter with data:", data);
 
+      // Make a deep copy of the form data for payload preparation
+      const formData = { ...data };
+      console.log("Form data before saving:", formData);
+      
+      // Ensure all the tweet filters have proper default values
+      const tweetFilters = formData.tweetFilters || {};
+      
       const payload = {
-        templateId: parseInt(String(data.templateId)),
-        name: data.name,
-        keywords: data.keywords || [],
+        templateId: parseInt(String(formData.templateId)),
+        name: formData.name,
+        keywords: formData.keywords || [],
         tweetFilters: {
-          verifiedOnly: data.tweetFilters.verifiedOnly ?? false,
-          minFollowers: data.tweetFilters.minFollowers ?? 0,
-          excludeReplies: data.tweetFilters.excludeReplies ?? false,
-          excludeRetweets: data.tweetFilters.excludeRetweets ?? false,
-          safeMode: data.tweetFilters.safeMode ?? true,
-          newsOutlets: data.tweetFilters.newsOutlets ?? [],
-          followerThreshold: data.tweetFilters.followerThreshold ?? 'low',
-          accountTypes: data.tweetFilters.accountTypes ?? [],
-          sectorId: data.tweetFilters.sectorId || undefined
+          verifiedOnly: tweetFilters.verifiedOnly ?? false,
+          minFollowers: tweetFilters.minFollowers ?? 0,
+          excludeReplies: tweetFilters.excludeReplies ?? false,
+          excludeRetweets: tweetFilters.excludeRetweets ?? false,
+          safeMode: tweetFilters.safeMode ?? true,
+          newsOutlets: tweetFilters.newsOutlets ?? [],
+          followerThreshold: tweetFilters.followerThreshold ?? 'low',
+          accountTypes: tweetFilters.accountTypes ?? [],
+          sectorId: tweetFilters.sectorId !== undefined ? tweetFilters.sectorId : undefined
         }
       };
+      
+      console.log("Final payload for saving:", payload);
 
       const res = await apiRequest(method, url, payload);
 
@@ -267,7 +284,15 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                     <FormControl>
                       <TweetFiltersControl
                         onFiltersChange={(filters) => {
+                          console.log("Tweet filters changed:", filters);
                           field.onChange(filters as TweetFilters);
+                          
+                          // Update the form state so other components can access it
+                          const currentValues = form.getValues();
+                          queryClient.setQueryData(['newsletterFormState'], {
+                            ...currentValues,
+                            tweetFilters: filters
+                          });
                         }}
                         initialFilters={field.value as TweetFilters}
                       />
