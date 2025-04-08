@@ -2,12 +2,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { NewsOutletsManager } from "./news-outlets-manager";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sector, type TweetFilters } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, X } from "lucide-react";
+import { PreDefinedSectorsDialog } from "./pre-defined-sectors-dialog";
 
 interface Props {
   onFiltersChange: (filters: TweetFilters) => void;
@@ -29,8 +31,13 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
     safeMode: initialFilters?.safeMode ?? true,
     newsOutlets: initialFilters?.newsOutlets ?? [],
     followerThreshold: initialFilters?.followerThreshold ?? 'low',
-    accountTypes: initialFilters?.accountTypes ?? []
+    accountTypes: initialFilters?.accountTypes ?? [],
+    sectorId: initialFilters?.sectorId
   });
+  
+  const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
+  const [showSectorSelection, setShowSectorSelection] = useState(!!filters.sectorId);
+  const [showKeywordsSection, setShowKeywordsSection] = useState(!filters.sectorId);
 
   const { data: sectors = [] } = useQuery<Sector[]>({
     queryKey: ["/api/sectors"],
@@ -89,53 +96,138 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Content Filters</CardTitle>
-        <CardDescription>
-          Customize your news sources and filter settings
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <>
+      <PreDefinedSectorsDialog
+        open={sectorDialogOpen}
+        onOpenChange={setSectorDialogOpen}
+      />
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Content Filters</CardTitle>
+          <CardDescription>
+            Customize your news sources and filter settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label className="text-base font-semibold">Industry Sector</Label>
-          <div className="text-sm text-muted-foreground mb-2">
-            Select a specific industry sector to automatically use its curated Twitter handles
+          <Label className="text-xl font-semibold text-primary">Content Source Selection</Label>
+          <div className="text-sm text-muted-foreground mb-4">
+            Choose how you want to source tweets for your newsletter
           </div>
-          <div className="flex flex-col gap-2">
-            {sectors.length > 0 ? (
-              <Select 
-                value={filters.sectorId?.toString() || "none"}
-                onValueChange={handleSectorSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a sector" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (use keywords only)</SelectItem>
-                  {sectors.map((sector) => (
-                    <SelectItem key={sector.id} value={sector.id.toString()}>
-                      {sector.name} ({sector.handles.length} handles)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                No sectors available. Create sectors in the Sectors page.
-              </div>
-            )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Card className={`border-2 ${!filters.sectorId ? 'border-primary' : 'border-muted'} cursor-pointer transition-all hover:shadow-md`}
+              onClick={() => {
+                // Clear sector ID
+                handleFilterChange('sectorId', undefined);
+                setShowKeywordsSection(true);
+              }}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {!filters.sectorId && <CheckCircle className="h-4 w-4 text-primary" />}
+                  Use Keywords
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Search for tweets using specific keywords you provide, optionally filtered by trusted accounts.
+                </p>
+              </CardContent>
+            </Card>
             
-            {filters.sectorId && (
-              <div className="flex items-center gap-2 text-sm py-2 px-3 rounded-md bg-muted">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>
-                  <span className="font-medium">Active sector:</span> {sectors.find(s => s.id === filters.sectorId)?.name} 
-                  (using {sectors.find(s => s.id === filters.sectorId)?.handles.length} handles)
-                </span>
-              </div>
-            )}
+            <Card className={`border-2 ${filters.sectorId ? 'border-primary' : 'border-muted'} cursor-pointer transition-all hover:shadow-md`}
+              onClick={() => {
+                // Show sector selection
+                setShowSectorSelection(true);
+              }}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {filters.sectorId && <CheckCircle className="h-4 w-4 text-primary" />}
+                  Use Industry Sector
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Follow specific Twitter accounts from a curated industry sector, with or without keywords.
+                </p>
+              </CardContent>
+            </Card>
           </div>
+
+          {showSectorSelection && (
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-4 mb-4 animate-in fade-in-50">
+              <div className="flex justify-between items-center">
+                <Label className="text-base font-semibold">Select Industry Sector</Label>
+                <Button variant="ghost" size="sm" onClick={() => setShowSectorSelection(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                {sectors.length > 0 ? (
+                  <Select 
+                    value={filters.sectorId?.toString() || "none"}
+                    onValueChange={handleSectorSelect}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a sector" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (use keywords only)</SelectItem>
+                      {sectors.map((sector) => (
+                        <SelectItem key={sector.id} value={sector.id.toString()}>
+                          {sector.name} ({sector.handles.length} handles)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    No sectors available. Create sectors in the Sectors page.
+                  </div>
+                )}
+                
+                {filters.sectorId && (
+                  <div className="p-3 rounded-md bg-primary/10 border border-primary/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                      <span className="font-medium">
+                        Active: {sectors.find(s => s.id === filters.sectorId)?.name}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <p className="mb-2">This sector includes {sectors.find(s => s.id === filters.sectorId)?.handles.length} trusted Twitter handles:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {sectors.find(s => s.id === filters.sectorId)?.handles.slice(0, 5).map((handle, i) => (
+                          <Badge key={i} variant="outline">@{handle}</Badge>
+                        ))}
+                        {(sectors.find(s => s.id === filters.sectorId)?.handles.length || 0) > 5 && (
+                          <Badge variant="outline">+{(sectors.find(s => s.id === filters.sectorId)?.handles.length || 0) - 5} more</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      setShowSectorSelection(false);
+                      setSectorDialogOpen(true);
+                    }}
+                  >
+                    Browse Pre-defined Sectors
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="space-y-2">
@@ -251,5 +343,6 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
