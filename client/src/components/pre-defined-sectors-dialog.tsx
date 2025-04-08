@@ -58,8 +58,25 @@ export function PreDefinedSectorsDialog({
       }
       return results;
     },
-    onSuccess: () => {
+    onSuccess: (createdSectors) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sectors"] });
+      
+      // If we created sectors successfully, use the first one as the active sector
+      if (createdSectors && createdSectors.length > 0) {
+        // Get the current form values for newsletters if we're on the newsletter form
+        const currentFormState = queryClient.getQueryData(['newsletterFormState']);
+        if (currentFormState) {
+          // Update the newsletter form state with the new sector ID
+          queryClient.setQueryData(['newsletterFormState'], {
+            ...currentFormState,
+            tweetFilters: {
+              ...(currentFormState.tweetFilters || {}),
+              sectorId: createdSectors[0].id
+            }
+          });
+        }
+      }
+      
       toast({
         title: "Success!",
         description: "Selected sectors have been added to your account",

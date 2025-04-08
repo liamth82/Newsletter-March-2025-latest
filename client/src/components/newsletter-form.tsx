@@ -55,7 +55,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   // This effect ensures we update the form when the newsletter prop changes
   useEffect(() => {
     if (newsletter) {
-      form.reset({
+      const formValues = {
         templateId: newsletter.templateId,
         name: newsletter.name,
         keywords: newsletter.keywords || [],
@@ -70,9 +70,28 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
           accountTypes: [],
           sectorId: undefined
         }
-      });
+      };
+      
+      // Store the form state in the query client so other components can access it
+      queryClient.setQueryData(['newsletterFormState'], formValues);
+      
+      form.reset(formValues);
     }
-  }, [newsletter, form]);
+  }, [newsletter, form, queryClient]);
+  
+  // Listen for changes to the newsletter form state from other components
+  useEffect(() => {
+    const formState = queryClient.getQueryData(['newsletterFormState']);
+    if (formState) {
+      // We need to update the form if the sector ID was changed by the pre-defined sectors dialog
+      if (formState.tweetFilters?.sectorId !== form.getValues().tweetFilters?.sectorId) {
+        form.setValue('tweetFilters', {
+          ...form.getValues().tweetFilters,
+          sectorId: formState.tweetFilters?.sectorId
+        });
+      }
+    }
+  }, [form, queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {

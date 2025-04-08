@@ -171,8 +171,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newsOutlets: Array.isArray(req.body.newsOutlets) ? req.body.newsOutlets : [],
         followerThreshold: req.body.followerThreshold,
         accountTypes: req.body.accountTypes,
-        sectorId: req.body.sectorId
+        sectorId: req.body.sectorId ? parseInt(req.body.sectorId) : undefined
       };
+      
+      // Log the sector ID if it's present
+      if (filters.sectorId) {
+        console.log(`Newsletter is using sector ID: ${filters.sectorId}`);
+      }
       
       // If sector is specified, get handles from that sector
       if (filters.sectorId) {
@@ -183,17 +188,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Merge with any manually added outlets
             const uniqueHandles = Array.from(new Set([...filters.newsOutlets, ...sector.handles]));
             filters.newsOutlets = uniqueHandles;
+          } else {
+            console.log(`Sector ${filters.sectorId} found but has no handles`);
           }
         } catch (error) {
           console.error('Error fetching sector:', error);
         }
       }
 
-      // Validate keywords only if we're not using a sector or news outlets
-      const isUsingSources = filters.newsOutlets.length > 0;
+      // Check if we have valid search criteria
+      const hasKeywords = req.body.keywords && 
+                       Array.isArray(req.body.keywords) && 
+                       req.body.keywords.length > 0 &&
+                       !(req.body.keywords.length === 1 && (!req.body.keywords[0] || req.body.keywords[0].trim() === ''));
+                       
+      const hasHandles = filters.newsOutlets.length > 0;
       
-      if (!isUsingSources && (!req.body.keywords || !Array.isArray(req.body.keywords) || req.body.keywords.length === 0 || 
-          (req.body.keywords.length === 1 && (!req.body.keywords[0] || req.body.keywords[0].trim() === '')))) {
+      // If we have neither keywords nor handles, return an error
+      if (!hasKeywords && !hasHandles) {
         return res.status(400).json({ 
           message: "Please provide at least one keyword or select a sector with handles"
         });

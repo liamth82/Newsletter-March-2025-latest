@@ -96,29 +96,39 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
   try {
     console.log('Starting tweet search with:', { keywords, filters });
 
-    // If a sector is selected, and we have sector handles, we should prioritize them
+    // If a sector is selected, we should use its handles by default
     let sectorHandles: string[] = [];
     if (filters.sectorId) {
       console.log(`Prioritizing sector ID: ${filters.sectorId}`);
       
-      // Get sector handles from the database if available
-      try {
-        // This code uses sector handles that were passed through from the frontend
-        if (filters.newsOutlets && filters.newsOutlets.length > 0) {
-          sectorHandles = [...filters.newsOutlets];
-          console.log(`Using ${sectorHandles.length} handles from sector`);
-        }
-      } catch (error) {
-        console.error(`Error getting sector handles: ${error}`);
+      // We'll use any handles that were passed from the frontend/database
+      if (filters.newsOutlets && filters.newsOutlets.length > 0) {
+        sectorHandles = [...filters.newsOutlets];
+        console.log(`Using ${sectorHandles.length} handles from sector`);
       }
     }
 
+    // Log the state of both keywords and handles
+    console.log('Search state:', {
+      hasKeywords: keywords && keywords.length > 0, 
+      hasHandles: sectorHandles.length > 0 || (filters.newsOutlets && filters.newsOutlets.length > 0)
+    });
+
+    // Check if we have enough search criteria
     if (!keywords || keywords.length === 0) {
       console.log('No keywords provided for search');
-      // Even with no keywords, we can still search for content from specific sector handles
-      if (sectorHandles.length === 0 && (!filters.newsOutlets || filters.newsOutlets.length === 0)) {
+      
+      // Even with no keywords, we can still search for content from specific handles
+      const hasValidHandles = sectorHandles.length > 0 || (filters.newsOutlets && filters.newsOutlets.length > 0);
+      
+      if (!hasValidHandles) {
         console.log('No keywords and no handles - returning empty results');
         return [];
+      } else {
+        console.log('No keywords but we have handles - continuing with handle-only search');
+        // If we only have handles, we'll do a broader search using an empty string
+        // The Twitter API will just return recent tweets from these handles
+        keywords = [''];
       }
     }
 
