@@ -14,6 +14,7 @@ interface TweetFilters {
   newsOutlets?: string[];
   followerThreshold?: 'low' | 'medium' | 'high';
   accountTypes?: ('news' | 'verified' | 'influencer')[];
+  sectorId?: number;
 }
 
 if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_SECRET) {
@@ -30,9 +31,19 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
   try {
     console.log('Starting tweet search with:', { keywords, filters });
 
+    // If a sector is selected, and we have sector handles, we should prioritize them
+    let useHandlesFromSector = false;
+    if (filters.sectorId) {
+      console.log(`Prioritizing sector ID: ${filters.sectorId}`);
+      useHandlesFromSector = true;
+    }
+
     if (!keywords || keywords.length === 0) {
       console.log('No keywords provided for search');
-      return [];
+      // Even with no keywords, we can still search for content from specific sector handles
+      if (!useHandlesFromSector && (!filters.newsOutlets || filters.newsOutlets.length === 0)) {
+        return [];
+      }
     }
 
     const appClient = await client.appLogin();

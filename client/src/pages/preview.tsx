@@ -18,6 +18,9 @@ interface FetchTweetsPayload {
   excludeRetweets: boolean;
   safeMode: boolean;
   newsOutlets: string[];
+  followerThreshold?: 'low' | 'medium' | 'high';
+  accountTypes?: ('news' | 'verified' | 'influencer')[];
+  sectorId?: number;
 }
 
 export default function Preview() {
@@ -44,7 +47,10 @@ export default function Preview() {
         excludeReplies: false,
         excludeRetweets: false,
         safeMode: true,
-        newsOutlets: []
+        newsOutlets: [],
+        followerThreshold: 'low',
+        accountTypes: [],
+        sectorId: undefined
       };
 
       const requestData: FetchTweetsPayload = {
@@ -148,7 +154,8 @@ export default function Preview() {
               <li>Use broader or more common keywords</li>
               <li>Reduce follower count requirements (currently ${newsletter.tweetFilters?.minFollowers || 0})</li>
               <li>Turn off some filters, like "verified only" or "exclude replies"</li>
-              <li>Try a shorter time frame or different news sources</li>
+              <li>Try selecting an industry sector with trusted accounts</li>
+              <li>Add more news sources to your trusted sources list</li>
             </ul>
           </div>
           <p class="mt-4 text-sm text-muted-foreground">Click the "Refresh Content" button after adjusting your newsletter settings</p>

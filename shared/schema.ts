@@ -10,7 +10,7 @@ export type TweetFilters = {
   excludeRetweets: boolean;
   safeMode: boolean;
   newsOutlets: string[];
-  sectorId?: number; // Optional sector ID to import handles from
+  sectorId?: number; // Optional sector ID to filter tweets by this sector's handles
   followerThreshold: 'low' | 'medium' | 'high'; // Different follower level categories
   accountTypes: ('news' | 'verified' | 'influencer')[]; // Types of accounts to include
 };
@@ -80,7 +80,8 @@ export const newsletters = pgTable("newsletters", {
     safeMode: true,
     newsOutlets: [],
     followerThreshold: 'low',
-    accountTypes: []
+    accountTypes: [],
+    sectorId: undefined
   }),
   narrativeSettings: json("narrative_settings").$type<NarrativeSettings>().default({
     style: 'professional',

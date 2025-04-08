@@ -161,16 +161,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Fetching tweets for newsletter:', req.params.id);
       console.log('Request body:', req.body);
 
-      // Validate input
-      if (!req.body.keywords || !Array.isArray(req.body.keywords)) {
-        return res.status(400).json({ message: "Keywords must be provided as an array" });
-      }
-
-      if (req.body.keywords.length === 0 || 
-          (req.body.keywords.length === 1 && (!req.body.keywords[0] || req.body.keywords[0].trim() === ''))) {
-        return res.status(400).json({ message: "Please provide at least one keyword or phrase to search for" });
-      }
-
       // Prepare filters
       const filters = {
         verifiedOnly: req.body.verifiedOnly === true,
@@ -178,22 +168,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         excludeReplies: req.body.excludeReplies === true,
         excludeRetweets: req.body.excludeRetweets === true,
         safeMode: req.body.safeMode !== false, // default to true
-        newsOutlets: Array.isArray(req.body.newsOutlets) ? req.body.newsOutlets : []
+        newsOutlets: Array.isArray(req.body.newsOutlets) ? req.body.newsOutlets : [],
+        followerThreshold: req.body.followerThreshold,
+        accountTypes: req.body.accountTypes,
+        sectorId: req.body.sectorId
       };
+      
+      // If sector is specified, get handles from that sector
+      if (filters.sectorId) {
+        try {
+          const sector = await storage.getSector(filters.sectorId);
+          if (sector && sector.handles && sector.handles.length > 0) {
+            console.log(`Using ${sector.handles.length} handles from sector ${sector.name}`);
+            // Merge with any manually added outlets
+            const uniqueHandles = Array.from(new Set([...filters.newsOutlets, ...sector.handles]));
+            filters.newsOutlets = uniqueHandles;
+          }
+        } catch (error) {
+          console.error('Error fetching sector:', error);
+        }
+      }
+
+      // Validate keywords only if we're not using a sector or news outlets
+      const isUsingSources = filters.newsOutlets.length > 0;
+      
+      if (!isUsingSources && (!req.body.keywords || !Array.isArray(req.body.keywords) || req.body.keywords.length === 0 || 
+          (req.body.keywords.length === 1 && (!req.body.keywords[0] || req.body.keywords[0].trim() === '')))) {
+        return res.status(400).json({ 
+          message: "Please provide at least one keyword or select a sector with handles"
+        });
+      }
 
       console.log('Using filters:', filters);
 
       // Fetch tweets
-      const tweets = await searchTweets(req.body.keywords, filters);
+      const tweets = await searchTweets(req.body.keywords || [], filters);
       console.log(`Retrieved ${tweets.length} tweets`);
 
       // Check if we got any tweets
       if (tweets.length === 0) {
         // Return a more specific message to help user adjust their search
         return res.status(404).json({ 
-          message: "No tweets found with your current search criteria. Try using broader keywords, reducing follower requirements, or disabling some filters.",
+          message: "No tweets found with your current search criteria. Try using broader keywords, reducing follower requirements, or selecting a different sector.",
           searchQuery: {
-            keywords: req.body.keywords,
+            keywords: req.body.keywords || [],
             filters: filters
           }
         });

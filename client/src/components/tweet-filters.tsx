@@ -55,6 +55,19 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
       handleFilterChange('newsOutlets', uniqueHandles);
     }
   };
+  
+  const handleSectorSelect = async (sectorId: string) => {
+    // If "none" is selected, clear the sector
+    if (sectorId === "none") {
+      handleFilterChange('sectorId', undefined);
+      return;
+    }
+    
+    const sector = sectors.find(s => s.id === parseInt(sectorId));
+    if (sector) {
+      handleFilterChange('sectorId', sector.id);
+    }
+  };
 
   const handleAccountTypeToggle = (type: 'news' | 'verified' | 'influencer') => {
     const currentTypes = filters.accountTypes || [];
@@ -73,6 +86,35 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-base font-semibold">Industry Sector</Label>
+          <div className="text-sm text-muted-foreground mb-2">
+            Select a specific industry sector to use curated Twitter handles
+          </div>
+          {sectors.length > 0 ? (
+            <Select 
+              value={filters.sectorId?.toString() || "none"}
+              onValueChange={handleSectorSelect}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a sector" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None (use keywords only)</SelectItem>
+                {sectors.map((sector) => (
+                  <SelectItem key={sector.id} value={sector.id.toString()}>
+                    {sector.name} ({sector.handles.length} handles)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No sectors available. Create sectors in the Sectors page.
+            </div>
+          )}
+        </div>
+        
         <div className="space-y-2">
           <Label className="text-base font-semibold">Account Types</Label>
           <div className="flex flex-wrap gap-2">
