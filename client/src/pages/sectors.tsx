@@ -52,6 +52,28 @@ export default function SectorsPage() {
       });
     },
   });
+  
+  // Create default sectors mutation
+  const createDefaultSectorsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/sectors/create-defaults");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sectors"] });
+      toast({
+        title: "Success",
+        description: "Default sectors created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Sector> }) => {
@@ -132,10 +154,21 @@ export default function SectorsPage() {
       <div className="flex-1 container py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Sectors</h1>
-          <Button onClick={() => setIsOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Sector
-          </Button>
+          <div className="flex gap-2">
+            {sectors.length === 0 && (
+              <Button 
+                variant="outline" 
+                onClick={() => createDefaultSectorsMutation.mutate()}
+                disabled={createDefaultSectorsMutation.isPending}
+              >
+                {createDefaultSectorsMutation.isPending ? "Creating..." : "Create Default Sectors"}
+              </Button>
+            )}
+            <Button onClick={() => setIsOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Sector
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

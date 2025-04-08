@@ -69,6 +69,58 @@ export function setupAuth(app: Express) {
       password: await hashPassword(req.body.password),
     });
 
+    // Create default sectors for the new user
+    try {
+      // Finance Sector
+      await storage.createSector({
+        userId: user.id,
+        name: "Finance",
+        description: "Financial news and market updates from trusted sources",
+        handles: [
+          "WSJ", "Bloomberg", "Forbes", "BusinessInsider", "TheEconomist", 
+          "FT", "CNBCnow", "YahooFinance", "MarketWatch", "ReutersBiz"
+        ]
+      });
+
+      // Technology Sector
+      await storage.createSector({
+        userId: user.id,
+        name: "Technology",
+        description: "Latest technology news and updates from industry leaders",
+        handles: [
+          "WIRED", "TechCrunch", "verge", "engadget", "mashable", 
+          "techreview", "CNBC", "ForbesTech", "BBCTech", "HackerNews"
+        ]
+      });
+
+      // Healthcare Sector
+      await storage.createSector({
+        userId: user.id,
+        name: "Healthcare",
+        description: "Healthcare news and medical research updates",
+        handles: [
+          "WHO", "CDCgov", "statnews", "NEJM", "KHNews", 
+          "NIH", "NYTHealth", "Reuters_Health", "Medscape", "WebMD"
+        ]
+      });
+      
+      // Environmental Sector
+      await storage.createSector({
+        userId: user.id,
+        name: "Environment",
+        description: "Climate change and environmental news from authoritative sources",
+        handles: [
+          "NatGeo", "ClimateHome", "guardianeco", "insideclimate", "climate", 
+          "ClimateReality", "UNEP", "GreenpeaceUK", "WWF", "nature"
+        ]
+      });
+      
+      console.log(`Created default sectors for user ${user.id}`);
+    } catch (error) {
+      console.error("Error creating default sectors:", error);
+      // Continue with registration even if sector creation fails
+    }
+
     req.login(user, (err) => {
       if (err) return next(err);
       res.status(201).json(user);

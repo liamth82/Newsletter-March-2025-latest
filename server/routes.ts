@@ -333,7 +333,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.deleteSector(parseInt(req.params.id));
     res.sendStatus(204);
   });
+  
+  // Create default predefined sectors for existing users
+  app.post("/api/sectors/create-defaults", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Finance Sector
+      await storage.createSector({
+        userId: req.user.id,
+        name: "Finance",
+        description: "Financial news and market updates from trusted sources",
+        handles: [
+          "WSJ", "Bloomberg", "Forbes", "BusinessInsider", "TheEconomist", 
+          "FT", "CNBCnow", "YahooFinance", "MarketWatch", "ReutersBiz"
+        ]
+      });
 
+      // Technology Sector
+      await storage.createSector({
+        userId: req.user.id,
+        name: "Technology",
+        description: "Latest technology news and updates from industry leaders",
+        handles: [
+          "WIRED", "TechCrunch", "verge", "engadget", "mashable", 
+          "techreview", "CNBC", "ForbesTech", "BBCTech", "HackerNews"
+        ]
+      });
+
+      // Healthcare Sector
+      await storage.createSector({
+        userId: req.user.id,
+        name: "Healthcare",
+        description: "Healthcare news and medical research updates",
+        handles: [
+          "WHO", "CDCgov", "statnews", "NEJM", "KHNews", 
+          "NIH", "NYTHealth", "Reuters_Health", "Medscape", "WebMD"
+        ]
+      });
+      
+      // Environmental Sector
+      await storage.createSector({
+        userId: req.user.id,
+        name: "Environment",
+        description: "Climate change and environmental news from authoritative sources",
+        handles: [
+          "NatGeo", "ClimateHome", "guardianeco", "insideclimate", "climate", 
+          "ClimateReality", "UNEP", "GreenpeaceUK", "WWF", "nature"
+        ]
+      });
+      
+      res.status(201).json({ message: "Default sectors created successfully" });
+    } catch (error) {
+      console.error("Error creating default sectors for existing user:", error);
+      res.status(500).json({ message: "Failed to create default sectors" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

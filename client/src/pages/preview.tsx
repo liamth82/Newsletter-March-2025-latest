@@ -268,7 +268,15 @@ export default function Preview() {
 // Helper function to generate narrative content from tweets
 function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings): string {
   if (!tweets || tweets.length === 0) {
-    return '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
+    return `<div class="newsletter-section">
+      <p class="text-muted-foreground">No news content available. Here are some suggestions:</p>
+      <ul class="list-disc pl-6 mt-2 text-muted-foreground">
+        <li>Try fetching tweets again</li>
+        <li>Adjust your keywords to be more general</li>
+        <li>Create predefined sectors from the Sectors page for curated content sources</li>
+        <li>Add news outlets or select an industry sector from the filter options</li>
+      </ul>
+    </div>`;
   }
 
   // Clean and sort tweets by date

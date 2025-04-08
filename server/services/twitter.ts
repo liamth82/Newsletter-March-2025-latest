@@ -27,21 +27,101 @@ const client = new TwitterApi({
   appSecret: process.env.TWITTER_API_SECRET,
 });
 
+// Quality score calculation function - defined outside any blocks for strict mode compatibility
+const calculateQualityScore = (tweet: any, author: any): number => {
+  let score = 0;
+  
+  // Engagement metrics
+  if (tweet.public_metrics) {
+    score += Math.min(tweet.public_metrics.like_count / 10, 30); // Up to 30 points for likes
+    score += Math.min(tweet.public_metrics.retweet_count * 2, 20); // Up to 20 points for retweets
+    score += Math.min(tweet.public_metrics.quote_count * 3, 15); // Up to 15 points for quotes
+  }
+  
+  // Author credibility
+  if (author.verified) {
+    score += 20; // Verified accounts get a significant boost
+  }
+  
+  if (author.public_metrics?.followers_count) {
+    score += Math.min(Math.log(author.public_metrics.followers_count) * 2, 25); // Up to 25 points based on followers (logarithmic scale)
+  }
+  
+  // Content quality signals
+  const tweetText = tweet.text.toLowerCase();
+  
+  // Prefer tweets with links
+  if (tweet.entities?.urls?.length) {
+    score += 10;
+  }
+  
+  // Prefer tweets without too many hashtags (often promotional)
+  const hashtagCount = (tweet.entities?.hashtags?.length || 0);
+  if (hashtagCount <= 2) {
+    score += 5;
+  } else if (hashtagCount >= 5) {
+    score -= 10; // Penalize hashtag stuffing
+  }
+  
+  // Prefer longer, more substantial tweets
+  if (tweetText.length > 100) {
+    score += 5;
+  }
+  
+  // Penalize common clickbait phrases
+  const clickbaitPhrases = ['you won\'t believe', 'shocking', 'mind blown', 'mind-blown', '!!!', 'jaw-dropping'];
+  if (clickbaitPhrases.some(phrase => tweetText.includes(phrase))) {
+    score -= 15;
+  }
+  
+  // Professional and formal content bonus
+  const professionalPhrases = ['analysis', 'report', 'study', 'research', 'data', 'statistics', 'announced', 'published'];
+  if (professionalPhrases.some(phrase => tweetText.includes(phrase))) {
+    score += 10; 
+  }
+  
+  // News source bonus based on description
+  const authorDesc = author.description ? author.description.toLowerCase() : '';
+  if (authorDesc) {
+    const newsIndicators = ['news', 'journalist', 'reporter', 'editor', 'correspondent', 'analyst', 'official', 'verified'];
+    if (newsIndicators.some(indicator => authorDesc.includes(indicator))) {
+      score += 15;
+    }
+  }
+  
+  return score;
+};
+
 export async function searchTweets(keywords: string[], filters: TweetFilters = {}) {
   try {
     console.log('Starting tweet search with:', { keywords, filters });
 
     // If a sector is selected, and we have sector handles, we should prioritize them
-    let useHandlesFromSector = false;
+    let sectorHandles: string[] = [];
     if (filters.sectorId) {
       console.log(`Prioritizing sector ID: ${filters.sectorId}`);
-      useHandlesFromSector = true;
+      
+      // Get sector handles from the database if available
+      try {
+        // The storage implementation should handle this - we're just logging
+        console.log(`Using handles from sector ID: ${filters.sectorId}`);
+        
+        // In a real implementation, we would fetch sector handles from database
+        // For now, we can add this when sector-specific handles are passed via newsOutlets
+        if (filters.newsOutlets && filters.newsOutlets.length > 0) {
+          sectorHandles = [...filters.newsOutlets];
+          console.log(`Using ${sectorHandles.length} handles from sector`);
+        }
+      } catch (error) {
+        console.error(`Error getting sector handles: ${error}`);
+      }
     }
 
     if (!keywords || keywords.length === 0) {
       console.log('No keywords provided for search');
       // Even with no keywords, we can still search for content from specific sector handles
-      if (!useHandlesFromSector && (!filters.newsOutlets || filters.newsOutlets.length === 0)) {
+      if (sectorHandles.length === 0 && (!filters.newsOutlets || filters.newsOutlets.length === 0)) {
+        console.log('No keywords and no handles - returning empty results');
         return [];
       }
     }
@@ -150,71 +230,6 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     const tweets = response.data.data;
     const users = response.data.includes?.users || [];
 
-    // Quality score calculation function
-    function calculateQualityScore(tweet: any, author: any): number {
-      let score = 0;
-      
-      // Engagement metrics
-      if (tweet.public_metrics) {
-        score += Math.min(tweet.public_metrics.like_count / 10, 30); // Up to 30 points for likes
-        score += Math.min(tweet.public_metrics.retweet_count * 2, 20); // Up to 20 points for retweets
-        score += Math.min(tweet.public_metrics.quote_count * 3, 15); // Up to 15 points for quotes
-      }
-      
-      // Author credibility
-      if (author.verified) {
-        score += 20; // Verified accounts get a significant boost
-      }
-      
-      if (author.public_metrics?.followers_count) {
-        score += Math.min(Math.log(author.public_metrics.followers_count) * 2, 25); // Up to 25 points based on followers (logarithmic scale)
-      }
-      
-      // Content quality signals
-      const tweetText = tweet.text.toLowerCase();
-      
-      // Prefer tweets with links
-      if (tweet.entities?.urls?.length) {
-        score += 10;
-      }
-      
-      // Prefer tweets without too many hashtags (often promotional)
-      const hashtagCount = (tweet.entities?.hashtags?.length || 0);
-      if (hashtagCount <= 2) {
-        score += 5;
-      } else if (hashtagCount >= 5) {
-        score -= 10; // Penalize hashtag stuffing
-      }
-      
-      // Prefer longer, more substantial tweets
-      if (tweetText.length > 100) {
-        score += 5;
-      }
-      
-      // Penalize common clickbait phrases
-      const clickbaitPhrases = ['you won\'t believe', 'shocking', 'mind blown', 'mind-blown', '!!!', 'jaw-dropping'];
-      if (clickbaitPhrases.some(phrase => tweetText.includes(phrase))) {
-        score -= 15;
-      }
-      
-      // Professional and formal content bonus
-      const professionalPhrases = ['analysis', 'report', 'study', 'research', 'data', 'statistics', 'announced', 'published'];
-      if (professionalPhrases.some(phrase => tweetText.includes(phrase))) {
-        score += 10; 
-      }
-      
-      // News source bonus based on description
-      if (author.description) {
-        const authorDesc = author.description.toLowerCase();
-        const newsIndicators = ['news', 'journalist', 'reporter', 'editor', 'correspondent', 'analyst', 'official', 'verified'];
-        if (newsIndicators.some(indicator => authorDesc.includes(indicator))) {
-          score += 15;
-        }
-      }
-      
-      return score;
-    }
-
     // Filter tweets
     let filteredTweets = tweets.filter(tweet => {
       const author = users.find(u => u.id === tweet.author_id);
@@ -264,15 +279,20 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
           isRightType = true;
         }
         
+        // Safe check for news accounts
         if (filters.accountTypes.includes('news') && author.description) {
+          const authorDesc = author.description;
           const newsTerms = ['news', 'media', 'journalist', 'editor', 'reporter', 'correspondent'];
-          if (newsTerms.some(term => author.description.toLowerCase().includes(term))) {
+          if (newsTerms.some(term => authorDesc.toLowerCase().includes(term))) {
             isRightType = true;
           }
         }
         
+        // Safe check for influencer accounts
         if (filters.accountTypes.includes('influencer') && 
-            author.public_metrics?.followers_count > 50000) {
+            author.public_metrics && 
+            typeof author.public_metrics.followers_count === 'number' && 
+            author.public_metrics.followers_count > 50000) {
           isRightType = true;
         }
         
