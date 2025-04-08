@@ -85,9 +85,8 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     // Build query string with keyword query and filters
     const queryParts = [keywordQuery];
 
-    // Prioritize professional content
+    // Prioritize professional content - use only valid operators
     // Always adding these to improve quality
-    queryParts.push('min_faves:5'); // Only tweets with some engagement
     queryParts.push('has:links'); // Prefer tweets with links (usually more informative)
     
     // Filter by news outlets if provided
@@ -109,7 +108,6 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     // Only apply these restrictions if safe mode is on
     if (filters.safeMode !== false) { // Default to safe mode if not explicitly set to false
       queryParts.push('-has:mentions'); // Avoid tweets mentioning others (often conversations)
-      queryParts.push('-is:nullcast'); // Avoid "nullcasted" tweets (special flag for low-quality content)
     }
 
     // Set appropriate follower threshold based on the setting
