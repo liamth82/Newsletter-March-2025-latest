@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { KeywordManager } from "./keyword-manager";
 import { TweetFiltersControl } from "./tweet-filters";
-import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle, Dialog } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { Loader2, Globe } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PreDefinedSectorsDialog } from "./pre-defined-sectors-dialog";
 
 interface NewsletterFormProps {
   onSuccess: () => void;
@@ -25,6 +26,7 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
 
   const { data: templates } = useQuery<Template[]>({
     queryKey: ["/api/templates"],
@@ -218,6 +220,26 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
             </TabsContent>
 
             <TabsContent value="filters" className="space-y-4">
+              <div className="bg-accent/30 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold">Use Pre-defined Sectors</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Browse and add curated Twitter handles from industry sectors
+                    </p>
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={() => setSectorDialogOpen(true)}
+                    variant="secondary"
+                    className="flex items-center gap-2"
+                  >
+                    <Globe size={18} />
+                    Browse Sectors
+                  </Button>
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="tweetFilters"
@@ -234,6 +256,11 @@ export function NewsletterForm({ onSuccess, newsletter }: NewsletterFormProps) {
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+
+              <PreDefinedSectorsDialog
+                open={sectorDialogOpen} 
+                onOpenChange={setSectorDialogOpen}
               />
             </TabsContent>
           </Tabs>
