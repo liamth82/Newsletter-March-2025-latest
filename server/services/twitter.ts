@@ -12,6 +12,8 @@ interface TweetFilters {
   excludeRetweets?: boolean;
   safeMode?: boolean;
   newsOutlets?: string[];
+  followerThreshold?: 'low' | 'medium' | 'high';
+  accountTypes?: ('news' | 'verified' | 'influencer')[];
 }
 
 if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_SECRET) {
@@ -72,6 +74,12 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     // Build query string with keyword query and filters
     const queryParts = [keywordQuery];
 
+    // Prioritize professional content
+    // Always adding these to improve quality
+    queryParts.push('min_faves:5'); // Only tweets with some engagement
+    queryParts.push('has:links'); // Prefer tweets with links (usually more informative)
+    
+    // Filter by news outlets if provided
     if (filters.newsOutlets?.length) {
       const fromQueries = filters.newsOutlets.map(handle => 
         `from:${handle.replace(/^@/, '').replace(/https?:\/\/(x|twitter)\.com\//, '')}`
@@ -79,6 +87,7 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       queryParts.push(`(${fromQueries.join(' OR ')})`);
     }
 
+    // High quality signals
     if (filters.verifiedOnly) queryParts.push('is:verified');
     if (filters.excludeReplies) queryParts.push('-is:reply');
     if (filters.excludeRetweets) queryParts.push('-is:retweet');
@@ -87,9 +96,28 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     queryParts.push('lang:en'); // Always limit to English for now
     
     // Only apply these restrictions if safe mode is on
-    if (filters.safeMode) {
-      // Allow links but still exclude mentions to avoid spam
-      queryParts.push('-has:mentions');
+    if (filters.safeMode !== false) { // Default to safe mode if not explicitly set to false
+      queryParts.push('-has:mentions'); // Avoid tweets mentioning others (often conversations)
+      queryParts.push('-is:nullcast'); // Avoid "nullcasted" tweets (special flag for low-quality content)
+    }
+
+    // Set appropriate follower threshold based on the setting
+    if (filters.followerThreshold) {
+      let minFollowerCount;
+      switch (filters.followerThreshold) {
+        case 'high':
+          minFollowerCount = 100000;
+          break;
+        case 'medium':
+          minFollowerCount = 10000;
+          break;
+        case 'low':
+        default:
+          minFollowerCount = 1000;
+          break;
+      }
+      // Override minFollowers if followerThreshold is specified
+      filters.minFollowers = minFollowerCount;
     }
 
     const query = queryParts.join(' ');
@@ -97,10 +125,10 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
 
     // Fetch tweets with an increased max_results for better chances of finding relevant content
     const response = await appClient.v2.search(query, {
-      max_results: 50, // Increased from 20 to get more results
+      max_results: 100, // Increased to get more quality options
       expansions: ['author_id'],
-      'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
-      'user.fields': ['verified', 'public_metrics', 'username'],
+      'tweet.fields': ['created_at', 'public_metrics', 'author_id', 'context_annotations', 'entities'],
+      'user.fields': ['verified', 'public_metrics', 'username', 'description'],
     });
 
     console.log('Raw Twitter API response:', response);
@@ -113,36 +141,133 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     const tweets = response.data.data;
     const users = response.data.includes?.users || [];
 
+    // Quality score calculation function
+    function calculateQualityScore(tweet: any, author: any): number {
+      let score = 0;
+      
+      // Engagement metrics
+      if (tweet.public_metrics) {
+        score += Math.min(tweet.public_metrics.like_count / 10, 30); // Up to 30 points for likes
+        score += Math.min(tweet.public_metrics.retweet_count * 2, 20); // Up to 20 points for retweets
+        score += Math.min(tweet.public_metrics.quote_count * 3, 15); // Up to 15 points for quotes
+      }
+      
+      // Author credibility
+      if (author.verified) {
+        score += 20; // Verified accounts get a significant boost
+      }
+      
+      if (author.public_metrics?.followers_count) {
+        score += Math.min(Math.log(author.public_metrics.followers_count) * 2, 25); // Up to 25 points based on followers (logarithmic scale)
+      }
+      
+      // Content quality signals
+      const tweetText = tweet.text.toLowerCase();
+      
+      // Prefer tweets with links
+      if (tweet.entities?.urls?.length) {
+        score += 10;
+      }
+      
+      // Prefer tweets without too many hashtags (often promotional)
+      const hashtagCount = (tweet.entities?.hashtags?.length || 0);
+      if (hashtagCount <= 2) {
+        score += 5;
+      } else if (hashtagCount >= 5) {
+        score -= 10; // Penalize hashtag stuffing
+      }
+      
+      // Prefer longer, more substantial tweets
+      if (tweetText.length > 100) {
+        score += 5;
+      }
+      
+      // Penalize common clickbait phrases
+      const clickbaitPhrases = ['you won\'t believe', 'shocking', 'mind blown', 'mind-blown', '!!!', 'jaw-dropping'];
+      if (clickbaitPhrases.some(phrase => tweetText.includes(phrase))) {
+        score -= 15;
+      }
+      
+      // Professional and formal content bonus
+      const professionalPhrases = ['analysis', 'report', 'study', 'research', 'data', 'statistics', 'announced', 'published'];
+      if (professionalPhrases.some(phrase => tweetText.includes(phrase))) {
+        score += 10; 
+      }
+      
+      // News source bonus based on description
+      if (author.description) {
+        const authorDesc = author.description.toLowerCase();
+        const newsIndicators = ['news', 'journalist', 'reporter', 'editor', 'correspondent', 'analyst', 'official', 'verified'];
+        if (newsIndicators.some(indicator => authorDesc.includes(indicator))) {
+          score += 15;
+        }
+      }
+      
+      return score;
+    }
+
     // Filter tweets
-    const filteredTweets = tweets.filter(tweet => {
+    let filteredTweets = tweets.filter(tweet => {
       const author = users.find(u => u.id === tweet.author_id);
       if (!author) {
         console.log(`No author found for tweet ${tweet.id}`);
         return false;
       }
 
-      // Dynamically adjust follower threshold if we're getting too few results
+      // Enforce minimum follower count
       if (filters.minFollowers && author.public_metrics?.followers_count) {
-        // Apply follower threshold with some flexibility
-        // If the filter is set to a very high number (100K+), we'll apply a 50% tolerance
-        // to ensure we still get enough results
-        let adjustedThreshold = filters.minFollowers;
-        
-        if (adjustedThreshold > 50000) {
-          adjustedThreshold = Math.floor(adjustedThreshold * 0.5); // 50% of original threshold for high values
-        } else if (adjustedThreshold > 10000) {
-          adjustedThreshold = Math.floor(adjustedThreshold * 0.7); // 70% of original threshold for medium values
-        }
-        
-        if (author.public_metrics.followers_count < adjustedThreshold) {
+        if (author.public_metrics.followers_count < filters.minFollowers) {
           return false;
         }
       }
 
-      if (filters.safeMode) {
+      // Content filtering
+      if (filters.safeMode !== false) { // Default to true
         const lowercaseText = tweet.text.toLowerCase();
-        const profanityList = ['fuck', 'shit', 'damn', 'ass'];
+        
+        // Filter out profanity and controversial content
+        const profanityList = ['fuck', 'shit', 'damn', 'ass', 'crap', 'bitch', 'sex', 'porn'];
         if (profanityList.some(word => lowercaseText.includes(word))) {
+          return false;
+        }
+        
+        // Filter out potentially promotional content
+        if (/buy|subscribe|offer|deal|discount|limited time|sign up|join now/i.test(lowercaseText)) {
+          return false;
+        }
+        
+        // Filter out low value content
+        if (/check out my|follow me|subscribe to my|latest video|watch now|click here/i.test(lowercaseText)) {
+          return false;
+        }
+        
+        // Avoid tweets that are too short as they often lack context
+        if (tweet.text.length < 50 && !tweet.entities?.urls?.length) {
+          return false;
+        }
+      }
+
+      // Additional account type filtering based on accountTypes setting
+      if (filters.accountTypes?.length) {
+        let isRightType = false;
+        
+        if (filters.accountTypes.includes('verified') && author.verified) {
+          isRightType = true;
+        }
+        
+        if (filters.accountTypes.includes('news') && author.description) {
+          const newsTerms = ['news', 'media', 'journalist', 'editor', 'reporter', 'correspondent'];
+          if (newsTerms.some(term => author.description.toLowerCase().includes(term))) {
+            isRightType = true;
+          }
+        }
+        
+        if (filters.accountTypes.includes('influencer') && 
+            author.public_metrics?.followers_count > 50000) {
+          isRightType = true;
+        }
+        
+        if (!isRightType) {
           return false;
         }
       }
@@ -150,13 +275,39 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       return true;
     });
 
+    // Assign quality scores to each tweet
+    const scoredTweets = filteredTweets.map(tweet => {
+      const author = users.find(u => u.id === tweet.author_id)!;
+      const qualityScore = calculateQualityScore(tweet, author);
+      
+      return {
+        tweet,
+        author,
+        qualityScore
+      };
+    });
+    
+    // Sort by quality score (high to low)
+    scoredTweets.sort((a, b) => b.qualityScore - a.qualityScore);
+    
+    // Take the top 70% for quality
+    const topTweets = scoredTweets.slice(0, Math.max(Math.ceil(scoredTweets.length * 0.7), 10));
+    
     // Process tweets
-    const processedTweets = filteredTweets.map(tweet => {
-      const author = users.find(u => u.id === tweet.author_id);
+    const processedTweets = topTweets.map(item => {
+      const { tweet, author } = item;
+      
+      // Clean up tweet text
+      let cleanText = tweet.text
+        .replace(/https:\/\/t\.co\/\w+/g, '') // Remove t.co links
+        .replace(/&amp;/g, '&') // Decode HTML entities
+        .replace(/RT @[^:]+: /, '') // Remove retweet prefixes
+        .trim();
+        
       return {
         id: tweet.id,
-        text: tweet.text,
-        author_username: author?.username,
+        text: cleanText,
+        author_username: author.username,
         created_at: tweet.created_at || new Date().toISOString(),
         public_metrics: tweet.public_metrics || {
           retweet_count: 0,
@@ -167,12 +318,12 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       };
     });
 
-    // Sort by date
+    // Now sort by date (recent first)
     processedTweets.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-    console.log(`Found ${processedTweets.length} processed tweets`);
+    console.log(`Found ${processedTweets.length} high-quality tweets out of ${tweets.length} total`);
     return processedTweets;
 
   } catch (error) {
