@@ -57,22 +57,47 @@ export default function Preview() {
       };
 
       const res = await apiRequest("POST", `/api/newsletters/${id}/tweets`, requestData);
+      
       if (!res.ok) {
-        throw new Error('Failed to fetch tweets');
+        // Check if we got a 404 (no tweets found) with a message
+        if (res.status === 404) {
+          const data = await res.json();
+          throw new Error(data.message || 'No tweets found with current search criteria');
+        }
+        
+        // Other error case
+        const errorText = await res.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.message || 'Failed to fetch tweets');
+        } catch {
+          throw new Error(errorText || 'Failed to fetch tweets');
+        }
       }
+      
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
-      toast({
-        title: "Success",
-        description: "Newsletter content updated with latest tweets.",
-      });
+      
+      // Check if we got any tweet content
+      if (data.tweetContent && data.tweetContent.length > 0) {
+        toast({
+          title: "Success",
+          description: `Newsletter updated with ${data.tweetContent.length} tweets.`,
+        });
+      } else {
+        toast({
+          title: "Warning",
+          description: "No tweets were found. Try adjusting your keywords or filters.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Search Criteria Issue",
+        description: error.message || "Failed to find tweets. Try using broader keywords or fewer filters.",
         variant: "destructive",
       });
     },
@@ -103,9 +128,9 @@ export default function Preview() {
   }
 
   // Generate tweet content before processing template
-  const tweetContent = newsletter.tweetContent && newsletter.tweetContent.length > 0
+  const tweetContent = newsletter.tweetContent && Array.isArray(newsletter.tweetContent) && newsletter.tweetContent.length > 0
     ? generateNarrativeSummary(
-        newsletter.tweetContent,
+        newsletter.tweetContent as Tweet[],
         newsletter.narrativeSettings || {
           style: 'professional',
           tone: 'formal',
@@ -113,7 +138,22 @@ export default function Preview() {
           paragraphCount: 6
         }
       )
-    : '<div class="newsletter-section"><p class="text-muted-foreground">No news content available. Try fetching tweets or adjusting your filters.</p></div>';
+    : `<div class="newsletter-section">
+        <div class="bg-muted p-6 rounded-lg text-center">
+          <h3 class="text-xl font-semibold mb-3">No Content Available</h3>
+          <p class="text-muted-foreground mb-4">We couldn't find any tweets matching your current search criteria.</p>
+          <div class="space-y-2 text-left mx-auto max-w-md">
+            <h4 class="font-medium">Try the following:</h4>
+            <ul class="list-disc pl-5 space-y-1 text-muted-foreground">
+              <li>Use broader or more common keywords</li>
+              <li>Reduce follower count requirements (currently ${newsletter.tweetFilters?.minFollowers || 0})</li>
+              <li>Turn off some filters, like "verified only" or "exclude replies"</li>
+              <li>Try a shorter time frame or different news sources</li>
+            </ul>
+          </div>
+          <p class="mt-4 text-sm text-muted-foreground">Click the "Refresh Content" button after adjusting your newsletter settings</p>
+        </div>
+       </div>`;
 
   // Process template content with Handlebars-like replacements
   let processedContent = template.content;
@@ -128,9 +168,12 @@ export default function Preview() {
   processedContent = processedContent.replace(/{{tweets}}/g, tweetContent);
 
   // Handle logos section
-  if (template.logos?.length) {
+  if (template.logos && Array.isArray(template.logos) && template.logos.length > 0) {
     const logoHtml = template.logos
-      .map((logo: string) => `<img src="${logo}" alt="Logo" class="logo" />`)
+      .map(logo => {
+        const logoUrl = typeof logo === 'string' ? logo : '';
+        return `<img src="${logoUrl}" alt="Logo" class="logo" />`;
+      })
       .join('');
     processedContent = processedContent.replace(
       /{{#each logos}}[\s\S]*?{{\/each}}/g,

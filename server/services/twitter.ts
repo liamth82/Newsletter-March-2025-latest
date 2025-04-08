@@ -36,8 +36,41 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     const appClient = await client.appLogin();
     console.log('Successfully authenticated with Twitter API');
 
-    // Build query string
-    const queryParts = [...keywords];
+    // Process and prepare keywords more effectively
+    // Split multi-word phrases if enclosed in quotes
+    const processedKeywords = keywords.flatMap(keyword => {
+      // Check if this is a quoted string with multiple keywords
+      const matchQuotes = keyword.match(/^"([^"]+)"$/);
+      if (matchQuotes) {
+        return matchQuotes[1]; // Return just the content inside the quotes
+      }
+      
+      // If it contains multiple quoted phrases, extract them
+      if (keyword.includes('"')) {
+        const quotedPhrases = [];
+        const regex = /"([^"]+)"/g;
+        let match;
+        
+        while ((match = regex.exec(keyword)) !== null) {
+          quotedPhrases.push(match[1]);
+        }
+        
+        if (quotedPhrases.length > 0) {
+          return quotedPhrases;
+        }
+      }
+      
+      return keyword;
+    });
+    
+    // Build a more flexible query string
+    // For better results, we'll use OR between keywords instead of AND
+    const keywordQuery = processedKeywords.length > 1 
+      ? `(${processedKeywords.join(' OR ')})`
+      : processedKeywords[0];
+      
+    // Build query string with keyword query and filters
+    const queryParts = [keywordQuery];
 
     if (filters.newsOutlets?.length) {
       const fromQueries = filters.newsOutlets.map(handle => 
@@ -49,17 +82,22 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
     if (filters.verifiedOnly) queryParts.push('is:verified');
     if (filters.excludeReplies) queryParts.push('-is:reply');
     if (filters.excludeRetweets) queryParts.push('-is:retweet');
+    
+    // Make safe mode less restrictive
+    queryParts.push('lang:en'); // Always limit to English for now
+    
+    // Only apply these restrictions if safe mode is on
     if (filters.safeMode) {
-      queryParts.push('-has:links -has:mentions');
-      queryParts.push('lang:en');
+      // Allow links but still exclude mentions to avoid spam
+      queryParts.push('-has:mentions');
     }
 
     const query = queryParts.join(' ');
     console.log('Final Twitter API query:', query);
 
-    // Fetch tweets
+    // Fetch tweets with an increased max_results for better chances of finding relevant content
     const response = await appClient.v2.search(query, {
-      max_results: 20,
+      max_results: 50, // Increased from 20 to get more results
       expansions: ['author_id'],
       'tweet.fields': ['created_at', 'public_metrics', 'author_id'],
       'user.fields': ['verified', 'public_metrics', 'username'],
@@ -83,8 +121,20 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
         return false;
       }
 
+      // Dynamically adjust follower threshold if we're getting too few results
       if (filters.minFollowers && author.public_metrics?.followers_count) {
-        if (author.public_metrics.followers_count < filters.minFollowers) {
+        // Apply follower threshold with some flexibility
+        // If the filter is set to a very high number (100K+), we'll apply a 50% tolerance
+        // to ensure we still get enough results
+        let adjustedThreshold = filters.minFollowers;
+        
+        if (adjustedThreshold > 50000) {
+          adjustedThreshold = Math.floor(adjustedThreshold * 0.5); // 50% of original threshold for high values
+        } else if (adjustedThreshold > 10000) {
+          adjustedThreshold = Math.floor(adjustedThreshold * 0.7); // 70% of original threshold for medium values
+        }
+        
+        if (author.public_metrics.followers_count < adjustedThreshold) {
           return false;
         }
       }

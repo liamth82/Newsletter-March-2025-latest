@@ -166,6 +166,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Keywords must be provided as an array" });
       }
 
+      if (req.body.keywords.length === 0 || 
+          (req.body.keywords.length === 1 && (!req.body.keywords[0] || req.body.keywords[0].trim() === ''))) {
+        return res.status(400).json({ message: "Please provide at least one keyword or phrase to search for" });
+      }
+
       // Prepare filters
       const filters = {
         verifiedOnly: req.body.verifiedOnly === true,
@@ -181,6 +186,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch tweets
       const tweets = await searchTweets(req.body.keywords, filters);
       console.log(`Retrieved ${tweets.length} tweets`);
+
+      // Check if we got any tweets
+      if (tweets.length === 0) {
+        // Return a more specific message to help user adjust their search
+        return res.status(404).json({ 
+          message: "No tweets found with your current search criteria. Try using broader keywords, reducing follower requirements, or disabling some filters.",
+          searchQuery: {
+            keywords: req.body.keywords,
+            filters: filters
+          }
+        });
+      }
 
       // Update newsletter
       const newsletter = await storage.updateNewsletter(parseInt(req.params.id), {
