@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, List, Eye, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { NewsOutletsManager } from "@/components/news-outlets-manager";
+import { PreDefinedSectorsDialog } from "@/components/pre-defined-sectors-dialog";
 import { Sector } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SidebarNav } from "@/components/sidebar-nav";
@@ -21,6 +22,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 export default function SectorsPage() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPredefinedDialogOpen, setIsPredefinedDialogOpen] = useState(false);
   const [editingSector, setEditingSector] = useState<Sector | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -157,10 +159,10 @@ export default function SectorsPage() {
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => createDefaultSectorsMutation.mutate()}
-              disabled={createDefaultSectorsMutation.isPending}
+              onClick={() => setIsPredefinedDialogOpen(true)}
             >
-              {createDefaultSectorsMutation.isPending ? "Creating..." : sectors.length === 0 ? "Create Default Sectors" : "Add Pre-made Sectors"}
+              <Eye className="w-4 h-4 mr-2" />
+              Browse & Customize Sectors
             </Button>
             <Button onClick={() => setIsOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -177,11 +179,10 @@ export default function SectorsPage() {
               Add pre-made sectors with curated Twitter handles for popular industries like Tech, Finance, Healthcare, and more.
             </p>
             <Button 
-              onClick={() => createDefaultSectorsMutation.mutate()}
-              disabled={createDefaultSectorsMutation.isPending}
+              onClick={() => setIsPredefinedDialogOpen(true)}
               className="mt-2"
             >
-              {createDefaultSectorsMutation.isPending ? "Creating..." : "Add Pre-made Sectors"}
+              Browse & Add Pre-made Sectors
             </Button>
           </div>
         )}
@@ -282,6 +283,12 @@ export default function SectorsPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Pre-defined sectors dialog */}
+        <PreDefinedSectorsDialog
+          open={isPredefinedDialogOpen}
+          onOpenChange={setIsPredefinedDialogOpen}
+        />
       </div>
     </div>
   );

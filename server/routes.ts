@@ -343,6 +343,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "NvidiaAI", "Stanford_AI", "MIT_CSAIL", "TensorFlow", "PyTorch",
           "IBMResearch", "MSFTResearch", "lexfridman", "huggingface", "distillpub"
         ]
+      },
+      {
+        name: "Environment",
+        description: "Environmental news, climate change, and sustainability",
+        handles: [
+          "NatGeo", "ClimateHome", "guardianeco", "insideclimate", "climate", 
+          "ClimateReality", "UNEP", "GreenpeaceUK", "WWF", "nature",
+          "EPA", "ClimateDesk", "ClimateGroup", "CarbonBrief", "ClimateSignals"
+        ]
+      },
+      {
+        name: "Education",
+        description: "Education news, research, and policy",
+        handles: [
+          "edutopia", "educationweek", "chronicle", "insidehighered", "EdSurge",
+          "educationpost", "nytimesonline", "USNewsEducation", "timeshighered", "tes",
+          "TheAtlanticEDU", "EdWeekTeacher", "EdLeader21", "TeacherToolkit", "edXOnline"
+        ]
+      },
+      {
+        name: "Business & Startups",
+        description: "Business insights, startups, and entrepreneurship",
+        handles: [
+          "HarvardBiz", "Inc", "Entrepreneur", "FastCompany", "VentureBeat",
+          "TechStars", "ycombinator", "STARTUPSco", "techstars", "ProductHunt",
+          "businessinsider", "venturebeat", "crunchbase", "startupdigest", "thehustleco"
+        ]
       }
     ];
   };
@@ -438,6 +465,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     await storage.deleteSector(parseInt(req.params.id));
     res.sendStatus(204);
+  });
+  
+  // Get all pre-defined sector templates (without creating them)
+  app.get("/api/sectors/pre-defined", async (req, res) => {
+    // This endpoint does not require authentication as it only returns templates
+    const preDefinedSectors = getDefaultSectors();
+    res.json(preDefinedSectors);
   });
   
 
