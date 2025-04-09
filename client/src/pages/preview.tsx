@@ -790,22 +790,70 @@ function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings):
   const usedTopics = new Set<string>();
   
   // Limit to the requested paragraph count, accounting for intro and conclusion
-  const remainingParagraphs = settings.paragraphCount - 2;
-  let paragraphCount = 0;
+  const requestedParagraphs = settings.paragraphCount;
+  let paragraphCount = 1; // Start with 1 for the intro
   
-  topicGroups.forEach(group => {
-    if (paragraphCount >= remainingParagraphs || usedTopics.has(group.topic)) return;
+  // Determine how many tweets we should try to include to target the wordCount
+  const averageTweetWords = 20; // Estimated average words per tweet
+  const targetTweetCount = Math.ceil(settings.wordCount / averageTweetWords);
+  
+  // Log paragraph and word count targets for debugging
+  console.log(`Target paragraph count: ${requestedParagraphs}, word count: ${settings.wordCount}, estimated tweets needed: ${targetTweetCount}`);
+  
+  let totalUsedTweets = 0;
+  let estimatedWordCount = 0;
+  
+  // Function to expand a tweet with additional info to increase word count
+  const expandTweetText = (text: string, author: string, topic: string): string => {
+    if (settings.wordCount <= 300) return text; // Don't expand for short content
     
-    const topicTweets = group.tweets.filter(t => !usedTweetIds.has(t.text)).slice(0, 2);
+    // Add additional context for longer word counts
+    let expansions = [
+      ` This represents an important development in the ${topic} space.`,
+      ` This information has significant implications for ${topic} followers.`,
+      ` This perspective adds valuable context to the ongoing ${topic} discussion.`,
+      ` ${author}'s coverage on this matter has been thorough and detailed.`,
+      ` This follows a series of related developments in ${topic}.`
+    ];
+    
+    // Add 1-2 expansions for high word counts
+    if (settings.wordCount >= 500) {
+      const expansion1 = expansions[Math.floor(Math.random() * expansions.length)];
+      let expansion2 = '';
+      
+      if (settings.wordCount >= 750) {
+        // Ensure we don't pick the same expansion twice
+        let availableExpansions = expansions.filter(exp => exp !== expansion1);
+        expansion2 = availableExpansions[Math.floor(Math.random() * availableExpansions.length)];
+      }
+      
+      return text + expansion1 + expansion2;
+    }
+    
+    return text + expansions[Math.floor(Math.random() * expansions.length)];
+  };
+  
+  // Process tweets for each topic group
+  topicGroups.forEach(group => {
+    if (paragraphCount >= requestedParagraphs || usedTopics.has(group.topic) || totalUsedTweets >= targetTweetCount) return;
+    
+    // Get more tweets for higher word counts
+    const tweetsPerTopic = settings.wordCount <= 300 ? 1 : (settings.wordCount <= 600 ? 2 : 3);
+    const topicTweets = group.tweets.filter(t => !usedTweetIds.has(t.text)).slice(0, tweetsPerTopic);
+    
     if (topicTweets.length === 0) return;
     
     usedTopics.add(group.topic);
     
-    // Create a paragraph for this topic using 1-2 related tweets
+    // Create a paragraph for this topic using related tweets
     let topicHtml = '';
     
     topicTweets.forEach((tweet, idx) => {
+      // Don't exceed paragraph count or estimated word count
+      if (paragraphCount >= requestedParagraphs || estimatedWordCount >= settings.wordCount) return;
+      
       usedTweetIds.add(tweet.text);
+      totalUsedTweets++;
       
       let transitionList;
       switch (settings.style) {
@@ -818,10 +866,18 @@ function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings):
         .replace('%author%', tweet.author)
         .replace('%topic%', group.topic);
       
-      const tweetText = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
+      // Expand tweet text for longer content
+      let tweetText = tweet.text.charAt(0).toUpperCase() + tweet.text.slice(1);
+      tweetText = expandTweetText(tweetText, tweet.author, group.topic);
+      
       const toneClass = settings.tone === 'formal' ? 'text-gray-800' : 'text-gray-700';
       
       topicHtml += `<p class="mb-4 ${toneClass} leading-relaxed">${transition} ${tweetText}</p>`;
+      
+      // Estimate words in this paragraph (transition + tweet text)
+      const estimatedParagraphWords = (transition.split(' ').length + tweetText.split(' ').length);
+      estimatedWordCount += estimatedParagraphWords;
+      
       paragraphCount++;
     });
     
@@ -835,7 +891,7 @@ function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings):
     }
   });
   
-  // Add a conclusion
+  // Add a conclusion - expand it for longer word counts
   const remainingTweets = cleanedTweets.filter(t => !usedTweetIds.has(t.text));
   if (remainingTweets.length > 0) {
     const conclusionTweet = remainingTweets[0];
@@ -845,10 +901,52 @@ function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings):
     const conclusionTemplate = conclusionTemplates[Math.floor(Math.random() * conclusionTemplates.length)];
     
     const conclusion = conclusionTemplate.replace('%author%', conclusionTweet.author);
-    const conclusionText = conclusionTweet.text.charAt(0).toUpperCase() + conclusionTweet.text.slice(1);
+    let conclusionText = conclusionTweet.text.charAt(0).toUpperCase() + conclusionTweet.text.slice(1);
+    
+    // Add additional wrap-up text for longer word counts
+    if (settings.wordCount >= 500) {
+      // Estimated word count so far
+      if (estimatedWordCount < settings.wordCount) {
+        // Add a summary paragraph to help hit the word count target
+        const summaryWords = [
+          `This ${settings.style === 'professional' ? 'analysis' : 
+                      settings.style === 'casual' ? 'update' : 
+                      'narrative'} has covered key developments in the industry. `,
+          `As events continue to unfold, staying informed through reliable sources will be essential. `,
+          `The landscape continues to evolve, and monitoring these trends will provide valuable insights going forward. `,
+          `This overview represents just a snapshot of the ongoing developments in this space. `,
+          `The information presented here reflects the most recent data available at the time of publication. `
+        ];
+        
+        // Add 2-4 summary sentences depending on how far we are from the target
+        const wordDeficit = settings.wordCount - estimatedWordCount;
+        const sentencesToAdd = Math.min(Math.ceil(wordDeficit / 20), 5);
+        
+        let summaryText = '';
+        for (let i = 0; i < sentencesToAdd; i++) {
+          if (i < summaryWords.length) {
+            summaryText += summaryWords[i];
+          }
+        }
+        
+        conclusionText += ' ' + summaryText;
+      }
+    }
     
     const toneClass = settings.tone === 'formal' ? 'text-gray-800' : 'text-gray-700';
     contentHtml += `<p class="mt-8 ${toneClass} leading-relaxed">${conclusion} ${conclusionText}</p>`;
+    
+    // For very long content, add an extra paragraph with a takeaway message
+    if (settings.wordCount >= 750 && estimatedWordCount < settings.wordCount) {
+      const takeaways = [
+        `In conclusion, these developments highlight the dynamic nature of the current landscape and underscore the importance of staying informed through reliable sources.`,
+        `Looking forward, these insights provide a foundation for understanding the evolving dynamics and potential future directions in this field.`,
+        `As we continue to monitor these developments, it becomes increasingly clear that the intersection of various factors will shape outcomes in the coming period.`
+      ];
+      
+      const takeaway = takeaways[Math.floor(Math.random() * takeaways.length)];
+      contentHtml += `<p class="mt-4 ${toneClass} leading-relaxed">${takeaway}</p>`;
+    }
   }
   
   // Create dramatically different styling for each style setting
