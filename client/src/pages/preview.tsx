@@ -97,6 +97,28 @@ export default function Preview() {
           throw new Error(data.message || 'No tweets found with current search criteria');
         }
         
+        // Handle API authentication errors (500)
+        if (res.status === 500) {
+          const errorText = await res.text();
+          try {
+            const errorJson = JSON.parse(errorText);
+            
+            // Check if this is a Twitter authentication error
+            if (errorJson.message && (
+                errorJson.message.includes('authentication failed') || 
+                errorJson.message.includes('credentials') ||
+                errorJson.message.includes('401')
+              )) {
+              console.error("Twitter API authentication error:", errorJson.message);
+              throw new Error(`Twitter API authentication failed. Please contact support to update API credentials.`);
+            }
+            
+            throw new Error(errorJson.message || 'Failed to fetch tweets');
+          } catch (e) {
+            throw new Error(errorText || 'Failed to fetch tweets');
+          }
+        }
+        
         // Other error case
         const errorText = await res.text();
         try {
@@ -127,11 +149,24 @@ export default function Preview() {
       }
     },
     onError: (error: Error) => {
-      toast({
-        title: "Search Criteria Issue",
-        description: error.message || "Failed to find tweets. Try using broader keywords or fewer filters.",
-        variant: "destructive",
-      });
+      // Check if this is a Twitter API authentication error
+      const isAuthError = error.message?.includes('authentication failed') || 
+                          error.message?.includes('API credentials') ||
+                          error.message?.includes('Twitter API');
+      
+      if (isAuthError) {
+        toast({
+          title: "Twitter API Connection Issue",
+          description: "We're currently experiencing difficulties connecting to Twitter/X. Our team has been notified and is working on a fix.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Search Criteria Issue",
+          description: error.message || "Failed to find tweets. Try using broader keywords or fewer filters.",
+          variant: "destructive",
+        });
+      }
     },
   });
 

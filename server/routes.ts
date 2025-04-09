@@ -233,14 +233,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Using filters:', filters);
 
       // Fetch tweets
-      const tweets = await searchTweets(req.body.keywords || [], filters);
-      console.log(`Retrieved ${tweets.length} tweets`);
+      let tweets = [];
+      let errorMessage = null;
+      
+      try {
+        // Attempt to fetch real tweets
+        tweets = await searchTweets(req.body.keywords || [], filters);
+        console.log(`Retrieved ${tweets.length} tweets`);
+      } catch (error) {
+        // Log the Twitter API error
+        console.error('Error fetching tweets:', error);
+        
+        // Store error message for response
+        errorMessage = error instanceof Error ? error.message : 'Unknown error fetching tweets';
+        
+        // Continue with empty tweets array - we'll handle the fallback below
+      }
 
       // Check if we got any tweets
       if (tweets.length === 0) {
-        // Return a more specific message to help user adjust their search
+        // Inform the client about the issue
+        const responseMessage = errorMessage 
+          ? `Unable to fetch tweets: ${errorMessage}`
+          : "No tweets found with your current search criteria. Try using broader keywords, reducing follower requirements, or selecting a different sector.";
+        
         return res.status(404).json({ 
-          message: "No tweets found with your current search criteria. Try using broader keywords, reducing follower requirements, or selecting a different sector.",
+          message: responseMessage,
           searchQuery: {
             keywords: req.body.keywords || [],
             filters: filters
