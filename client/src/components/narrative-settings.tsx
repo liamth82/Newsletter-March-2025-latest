@@ -9,6 +9,7 @@ import { type NarrativeSettings } from "@shared/schema";
 import { BookText, Layout, Palette, Quote, AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
 
 interface Props {
   value: NarrativeSettings;
@@ -37,8 +38,8 @@ const toneDescriptions: Record<typeof tones[number], string> = {
 };
 
 export function NarrativeSettingsControl({ value, onChange }: Props) {
-  // Set default values for any new properties
-  const settings = {
+  // Use internal state to track changes without immediately submitting
+  const [settings, setSettings] = useState({
     style: value.style || "professional",
     tone: value.tone || "formal",
     wordCount: value.wordCount || 300,
@@ -49,13 +50,30 @@ export function NarrativeSettingsControl({ value, onChange }: Props) {
     improveSentences: value.improveSentences || true,
     enhanceCohesion: value.enhanceCohesion || true,
     includeTransitions: value.includeTransitions || true
-  };
+  });
 
+  // Update local state when external value changes
+  useEffect(() => {
+    setSettings({
+      style: value.style || "professional",
+      tone: value.tone || "formal",
+      wordCount: value.wordCount || 300, 
+      paragraphCount: value.paragraphCount || 6,
+      format: value.format || "newsletter",
+      themeStyle: value.themeStyle || "minimal",
+      useQuotes: value.useQuotes || false,
+      improveSentences: value.improveSentences || true,
+      enhanceCohesion: value.enhanceCohesion || true,
+      includeTransitions: value.includeTransitions || true
+    });
+  }, [value]);
+
+  // This now only updates the local state, not the parent component
   const handleChange = (key: keyof typeof settings, newValue: any) => {
-    onChange({
+    setSettings({
       ...settings,
       [key]: newValue
-    } as NarrativeSettings);
+    });
   };
 
   return (
@@ -346,6 +364,16 @@ export function NarrativeSettingsControl({ value, onChange }: Props) {
             </div>
           </TabsContent>
         </Tabs>
+        
+        {/* Add a save button at the bottom */}
+        <div className="flex justify-end mt-6">
+          <Button 
+            onClick={() => onChange(settings)}
+            className="bg-primary hover:bg-primary/90"
+          >
+            Save Changes
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

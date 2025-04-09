@@ -455,6 +455,7 @@ export default function Preview() {
                       includeTransitions: true
                     }}
                     onChange={(updatedSettings) => {
+                      console.log('Narrative settings update requested:', updatedSettings);
                       updateNarrativeSettingsMutation.mutate(updatedSettings);
                     }}
                   />
@@ -726,7 +727,43 @@ function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings):
   };
 
   // Build cohesive paragraphs grouped by topic
-  let contentHtml = '';
+  // Add a style-specific header to make it obvious which style is being used
+  let headerHtml = '';
+  let headerBgColor = '';
+  let headerTitle = '';
+  let headerFont = '';
+  
+  // Set style-specific header properties
+  switch(settings.style) {
+    case 'professional':
+      headerBgColor = 'bg-blue-700';
+      headerTitle = 'Market Analysis';
+      headerFont = 'font-serif'; // Georgia
+      break;
+    case 'casual':
+      headerBgColor = 'bg-green-600';
+      headerTitle = "What's New";
+      headerFont = 'font-sans'; // Arial
+      break;
+    case 'storytelling':
+      headerBgColor = 'bg-purple-700';
+      headerTitle = 'The Latest Chapter';
+      headerFont = 'font-serif italic'; // Palatino-like
+      break;
+  }
+  
+  // Create the header with style and tone indicators
+  headerHtml = `
+    <div class="${headerBgColor} text-white p-4 rounded-t-lg mb-6">
+      <h2 class="text-xl ${headerFont} font-bold">${headerTitle}</h2>
+      <div class="flex gap-2 mt-2">
+        <span class="text-xs bg-white/20 px-2 py-1 rounded">${settings.style}</span>
+        <span class="text-xs bg-white/20 px-2 py-1 rounded">${settings.tone}</span>
+      </div>
+    </div>
+  `;
+  
+  let contentHtml = headerHtml;
   let usedTweetIds = new Set<string>();
   
   // Add a properly formatted introduction
