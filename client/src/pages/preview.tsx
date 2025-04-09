@@ -1,12 +1,16 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { SidebarNav } from "@/components/sidebar-nav";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Newsletter, type Tweet, type NarrativeSettings, type Template } from "@shared/schema";
-import { Loader2 } from "lucide-react";
+import { Loader2, Settings, Edit, FileEdit, FileText } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { TweetFiltersControl } from "@/components/tweet-filters";
+import { NarrativeSettingsControl } from "@/components/narrative-settings";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect, useState } from "react";
 import DOMPurify from 'dompurify';
 
 // Update the fetch tweets mutation to use proper types
@@ -27,6 +31,7 @@ export default function Preview() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("preview");
 
   const { data: newsletter, isLoading: loadingNewsletter } = useQuery<Newsletter>({
     queryKey: [`/api/newsletters/${id}`],
@@ -37,8 +42,48 @@ export default function Preview() {
     enabled: !!newsletter?.templateId,
   });
 
+  // Mutation for updating narrative settings
+  const updateNarrativeSettingsMutation = useMutation({
+    mutationFn: async (narrativeSettings: NarrativeSettings) => {
+      if (!newsletter) throw new Error('Newsletter not found');
+      
+      const payload = {
+        ...newsletter,
+        narrativeSettings
+      };
+      
+      const res = await apiRequest("PATCH", `/api/newsletters/${id}`, payload);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.message || 'Failed to update narrative settings');
+        } catch {
+          throw new Error(errorText || 'Failed to update narrative settings');
+        }
+      }
+      
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Settings Updated",
+        description: "Narrative settings have been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Update Settings",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const fetchTweetsMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (payload?: any) => {
       if (!newsletter) throw new Error('Newsletter not found');
 
       const filters = newsletter.tweetFilters || {
@@ -292,13 +337,35 @@ export default function Preview() {
       <SidebarNav />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold">Newsletter Preview</h1>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setLocation('/')}>
-                Back
+                <FileText className="mr-2 h-4 w-4" />
+                Back to Dashboard
               </Button>
-              <div className="flex gap-2">
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Preview
+              </TabsTrigger>
+              <TabsTrigger value="content-settings" className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                Content Settings
+              </TabsTrigger>
+              <TabsTrigger value="filters" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Tweet Filters
+              </TabsTrigger>
+            </TabsList>
+
+            {/* PREVIEW TAB */}
+            <TabsContent value="preview" className="space-y-4">
+              <div className="flex justify-end gap-2 mb-4">
                 <Button variant="outline" onClick={() => {
                   const updatedFilters = {
                     ...newsletter.tweetFilters,
@@ -346,19 +413,108 @@ export default function Preview() {
                   Refresh Content
                 </Button>
               </div>
-            </div>
-          </div>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div 
+                    className="preview-content newsletter-content"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(styles + processedContent)
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <Card>
-            <CardContent className="p-6">
-              <div 
-                className="preview-content newsletter-content"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(styles + processedContent)
-                }}
-              />
-            </CardContent>
-          </Card>
+            {/* CONTENT SETTINGS TAB */}
+            <TabsContent value="content-settings" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Content Generation Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <NarrativeSettingsControl 
+                    value={newsletter.narrativeSettings || {
+                      style: 'professional',
+                      tone: 'formal',
+                      wordCount: 300,
+                      paragraphCount: 6,
+                      format: 'newsletter',
+                      themeStyle: 'minimal',
+                      useQuotes: false,
+                      improveSentences: true,
+                      enhanceCohesion: true,
+                      includeTransitions: true
+                    }}
+                    onChange={(updatedSettings) => {
+                      updateNarrativeSettingsMutation.mutate(updatedSettings);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => {
+                    setActiveTab('preview');
+                    fetchTweetsMutation.mutate({});
+                  }}
+                  disabled={updateNarrativeSettingsMutation.isPending}
+                >
+                  {updateNarrativeSettingsMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Apply Settings & Refresh Content
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* TWEET FILTERS TAB */}
+            <TabsContent value="filters" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tweet Filters</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TweetFiltersControl 
+                    onFiltersChange={(filters) => {
+                      const payload = {
+                        ...newsletter,
+                        tweetFilters: filters
+                      };
+                      
+                      // Update newsletter with new filters
+                      apiRequest("PATCH", `/api/newsletters/${id}`, payload)
+                        .then(() => {
+                          toast({
+                            title: "Filters Updated",
+                            description: "Tweet filters have been saved successfully.",
+                          });
+                          queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
+                        })
+                        .catch((error) => {
+                          toast({
+                            title: "Failed to Update Filters",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        });
+                    }}
+                    initialFilters={newsletter.tweetFilters || undefined}
+                  />
+                </CardContent>
+              </Card>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => {
+                    setActiveTab('preview');
+                    fetchTweetsMutation.mutate({});
+                  }}
+                >
+                  Apply Filters & Refresh Content
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

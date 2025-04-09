@@ -32,9 +32,15 @@ export type Tweet = {
 // Add NarrativeSettings type
 export type NarrativeSettings = {
   style: 'professional' | 'casual' | 'storytelling';
-  tone: 'formal' | 'conversational';
+  tone: 'formal' | 'conversational' | 'enthusiastic' | 'analytical';
   wordCount: number;
   paragraphCount: number;
+  format?: 'article' | 'newsletter' | 'report' | 'memo';
+  themeStyle?: 'minimal' | 'elegant' | 'bold' | 'modern';
+  useQuotes?: boolean;
+  improveSentences?: boolean;
+  enhanceCohesion?: boolean;
+  includeTransitions?: boolean;
 };
 
 export const users = pgTable("users", {
@@ -88,7 +94,13 @@ export const newsletters = pgTable("newsletters", {
     style: 'professional',
     tone: 'formal',
     wordCount: 300,
-    paragraphCount: 6
+    paragraphCount: 6,
+    format: 'newsletter',
+    themeStyle: 'minimal',
+    useQuotes: false,
+    improveSentences: true,
+    enhanceCohesion: true,
+    includeTransitions: true
   })
 });
 
@@ -159,6 +171,18 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
     followerThreshold: z.enum(['low', 'medium', 'high']).optional(),
     accountTypes: z.array(z.enum(['news', 'verified', 'influencer'])).optional(),
     useSampleData: z.boolean().optional()
+  }).optional(),
+  narrativeSettings: z.object({
+    style: z.enum(['professional', 'casual', 'storytelling']),
+    tone: z.enum(['formal', 'conversational', 'enthusiastic', 'analytical']),
+    wordCount: z.number().min(100).max(1000),
+    paragraphCount: z.number().min(1).max(12),
+    format: z.enum(['article', 'newsletter', 'report', 'memo']).optional(),
+    themeStyle: z.enum(['minimal', 'elegant', 'bold', 'modern']).optional(),
+    useQuotes: z.boolean().optional(),
+    improveSentences: z.boolean().optional(),
+    enhanceCohesion: z.boolean().optional(),
+    includeTransitions: z.boolean().optional()
   }).optional()
 });
 
