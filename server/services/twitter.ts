@@ -22,9 +22,20 @@ if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_SECRET) {
   throw new Error('Twitter API credentials are required');
 }
 
+// Enhanced Twitter client configuration with better logging
+console.log('Initializing Twitter client with credentials:', {
+  appKey: process.env.TWITTER_API_KEY ? 'present' : 'missing',
+  appSecret: process.env.TWITTER_API_SECRET ? 'present' : 'missing',
+  accessToken: process.env.TWITTER_ACCESS_TOKEN ? 'present' : 'missing',
+  accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET ? 'present' : 'missing'
+});
+
+// Use both app and user authentication for better access
 const client = new TwitterApi({
   appKey: process.env.TWITTER_API_KEY,
   appSecret: process.env.TWITTER_API_SECRET,
+  accessToken: process.env.TWITTER_ACCESS_TOKEN,
+  accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
 });
 
 // Quality score calculation function - defined outside any blocks for strict mode compatibility
@@ -144,8 +155,28 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       }
     }
 
-    const appClient = await client.appLogin();
-    console.log('Successfully authenticated with Twitter API');
+    // Try different authentication methods
+    let appClient;
+    try {
+      // First try user authentication if we have user tokens
+      if (process.env.TWITTER_ACCESS_TOKEN && process.env.TWITTER_ACCESS_TOKEN_SECRET) {
+        // Use the client directly with user authentication
+        appClient = client;
+        console.log('Using Twitter API with user authentication');
+      } else {
+        // Fall back to app-only authentication
+        appClient = await client.appLogin();
+        console.log('Using Twitter API with app-only authentication');
+      }
+      console.log('Successfully authenticated with Twitter API');
+    } catch (error) {
+      console.error('Failed to authenticate with Twitter API:', error);
+      if (error instanceof Error) {
+        throw new Error(`Twitter API authentication failed: ${error.message}`);
+      } else {
+        throw new Error(`Twitter API authentication failed: Unknown error`);
+      }
+    }
 
     // Process and prepare keywords more effectively
     // Split multi-word phrases if enclosed in quotes
@@ -174,34 +205,52 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
       return keyword;
     });
     
-    // Build a more flexible query string
-    // For better results, we'll use OR between keywords instead of AND
-    const keywordQuery = processedKeywords.length > 1 
-      ? `(${processedKeywords.join(' OR ')})`
-      : processedKeywords[0];
-      
-    // Build query string with keyword query and filters
-    const queryParts = [keywordQuery];
-
-    // Prioritize professional content - use only valid operators
-    // Always adding these to improve quality
-    queryParts.push('has:links'); // Prefer tweets with links (usually more informative)
+    // Build a more effective query string
+    // Initialize array for query parts
+    const queryParts = [];
     
-    // Filter by news outlets if provided
+    // Handle keywords if we have them
+    if (keywords.length > 0 && keywords[0] !== '') {
+      const keywordQuery = processedKeywords.length > 1 
+        ? `(${processedKeywords.join(' OR ')})`
+        : processedKeywords[0];
+      queryParts.push(keywordQuery);
+    }
+    
+    // Simplify the query structure for handles-only searches
+    // Filter by news outlets if provided - this is critical for sector-based searches
     if (filters.newsOutlets?.length) {
-      const fromQueries = filters.newsOutlets.map(handle => 
-        `from:${handle.replace(/^@/, '').replace(/https?:\/\/(x|twitter)\.com\//, '')}`
+      // Clean up handles format - important for Twitter API
+      const cleanHandles = filters.newsOutlets.map(handle => 
+        handle.replace(/^@/, '').replace(/https?:\/\/(x|twitter)\.com\//, '')
       );
       
-      // If we're using a sector without keywords, remove the keyword query part
-      if (keywords.length === 0 || keywords[0] === '') {
-        // Remove the keyword query (which would be empty or invalid)
-        queryParts.shift();
-        console.log("No keywords provided, using only sector handles for search");
-      }
+      console.log(`Using ${cleanHandles.length} handles for search:`, cleanHandles.slice(0, 5));
       
-      queryParts.push(`(${fromQueries.join(' OR ')})`);
+      // For sector-only searches, we need a simpler query structure
+      if (keywords.length === 0 || keywords[0] === '') {
+        // If we have no keywords, use a simpler query with just the "from:" operators
+        // Use only first 5 handles to avoid query length limits
+        const simplifiedHandles = cleanHandles.slice(0, 5);
+        const fromQueries = simplifiedHandles.map(handle => `from:${handle}`);
+        
+        // For handle-only searches, this is the entire query
+        queryParts.push(`(${fromQueries.join(' OR ')})`);
+        console.log("Using simplified handle-only search with first 5 handles");
+      } else {
+        // If we have keywords, combine with handles
+        const fromQueries = cleanHandles.slice(0, 10).map(handle => `from:${handle}`);
+        queryParts.push(`(${fromQueries.join(' OR ')})`);
+      }
     }
+    
+    // Empty query check - must have at least one search term
+    if (queryParts.length === 0) {
+      throw new Error("Cannot create a valid search query: no keywords or handles provided");
+    }
+    
+    // Quality filters - keep these to a minimum for better results
+    queryParts.push('has:links'); // Prefer tweets with links (usually more informative)
 
     // High quality signals
     if (filters.verifiedOnly) queryParts.push('is:verified');
@@ -383,9 +432,27 @@ export async function searchTweets(keywords: string[], filters: TweetFilters = {
 
   } catch (error) {
     console.error('Twitter API error:', error);
+    
+    // More detailed error logging
     if (error instanceof Error) {
+      // Check for specific API errors
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+      
+      if (error.message.includes('401')) {
+        throw new Error('Twitter API authentication failed. Please check API credentials.');
+      } else if (error.message.includes('429')) {
+        throw new Error('Twitter API rate limit exceeded. Please try again later.');
+      } else if (error.message.includes('403')) {
+        throw new Error('Twitter API access forbidden. Your credentials may not have the required permissions.');
+      }
+      
       throw new Error(`Failed to fetch tweets: ${error.message}`);
     }
+    
     throw new Error('Failed to fetch tweets: Unknown error');
   }
 }
