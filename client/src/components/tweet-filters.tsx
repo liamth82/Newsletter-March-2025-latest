@@ -32,7 +32,8 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
     newsOutlets: initialFilters?.newsOutlets ?? [],
     followerThreshold: initialFilters?.followerThreshold ?? 'low',
     accountTypes: initialFilters?.accountTypes ?? [],
-    sectorId: initialFilters?.sectorId
+    sectorId: initialFilters?.sectorId,
+    useSampleData: initialFilters?.useSampleData ?? false
   });
   
   const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
@@ -357,6 +358,17 @@ export function TweetFiltersControl({ onFiltersChange, initialFilters }: Props) 
                 id="safe-mode"
                 checked={filters.safeMode}
                 onCheckedChange={(checked) => handleFilterChange('safeMode', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="use-sample-data" className="block">Use sample data</Label>
+                <p className="text-xs text-muted-foreground mt-1">Use sample tweets when Twitter API is unavailable</p>
+              </div>
+              <Switch
+                id="use-sample-data"
+                checked={filters.useSampleData}
+                onCheckedChange={(checked) => handleFilterChange('useSampleData', checked)}
               />
             </div>
           </div>

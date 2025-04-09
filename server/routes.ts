@@ -153,6 +153,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Add a route for accessing sample tweet data (for use when Twitter API is unavailable)
+  app.get("/api/sample-tweets", (req, res) => {
+    // Return some realistic sample tweets
+    const sampleTweets = [
+      {
+        id: "sample1",
+        text: "New research indicates climate change is affecting global food systems more rapidly than previously estimated. Adaptation strategies must be prioritized to ensure food security.",
+        author_username: "ClimateExpert",
+        created_at: new Date().toISOString(),
+        public_metrics: {
+          retweet_count: 156,
+          reply_count: 24,
+          like_count: 287,
+          quote_count: 15
+        }
+      },
+      {
+        id: "sample2",
+        text: "Breaking: The Federal Reserve announces new policy framework addressing inflation concerns while maintaining growth targets. Markets respond positively to balanced approach.",
+        author_username: "EconomicsToday",
+        created_at: new Date().toISOString(),
+        public_metrics: {
+          retweet_count: 289,
+          reply_count: 57,
+          like_count: 431,
+          quote_count: 28
+        }
+      },
+      {
+        id: "sample3",
+        text: "Latest tech developments show AI applications in healthcare providing remarkable diagnostic improvements. Patient outcomes improving significantly with new screening tools.",
+        author_username: "TechInsights",
+        created_at: new Date().toISOString(),
+        public_metrics: {
+          retweet_count: 201,
+          reply_count: 19,
+          like_count: 354,
+          quote_count: 12
+        }
+      },
+      {
+        id: "sample4",
+        text: "Global supply chain resilience strengthening as companies implement diversification strategies. New manufacturing hubs emerging across Southeast Asia and Eastern Europe.",
+        author_username: "GlobalTrade",
+        created_at: new Date().toISOString(),
+        public_metrics: {
+          retweet_count: 118,
+          reply_count: 22,
+          like_count: 176,
+          quote_count: 9
+        }
+      },
+      {
+        id: "sample5",
+        text: "Education reform efforts focusing on skills-based learning gaining momentum across multiple countries. Employers increasingly value practical skills over traditional credentials.",
+        author_username: "EducationFuture",
+        created_at: new Date().toISOString(),
+        public_metrics: {
+          retweet_count: 143,
+          reply_count: 37,
+          like_count: 265,
+          quote_count: 18
+        }
+      }
+    ];
+    
+    res.json(sampleTweets);
+  });
+
   // Twitter Integration
   app.post("/api/newsletters/:id/tweets", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -160,6 +229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Fetching tweets for newsletter:', req.params.id);
       console.log('Request body:', req.body);
+      
+      // Check if user has requested to use sample data 
+      const useSampleData = req.body.useSampleData === true;
 
       // Prepare filters
       const filters = {
@@ -237,9 +309,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let errorMessage = null;
       
       try {
-        // Attempt to fetch real tweets
-        tweets = await searchTweets(req.body.keywords || [], filters);
-        console.log(`Retrieved ${tweets.length} tweets`);
+        if (useSampleData) {
+          // Use sample data when requested
+          console.log('Using sample tweet data as requested');
+          // Call the sample data endpoint we just created
+          const sampleResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/sample-tweets`);
+          tweets = await sampleResponse.json();
+          console.log(`Retrieved ${tweets.length} sample tweets`);
+        } else {
+          // Attempt to fetch real tweets
+          tweets = await searchTweets(req.body.keywords || [], filters);
+          console.log(`Retrieved ${tweets.length} tweets from Twitter API`);
+        }
       } catch (error) {
         // Log the Twitter API error
         console.error('Error fetching tweets:', error);
@@ -247,7 +328,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store error message for response
         errorMessage = error instanceof Error ? error.message : 'Unknown error fetching tweets';
         
-        // Continue with empty tweets array - we'll handle the fallback below
+        // Try to use sample data as fallback if there was an API error and we weren't already using sample data
+        if (!useSampleData && errorMessage && errorMessage.includes('Twitter API')) {
+          console.log('Falling back to sample data due to Twitter API error');
+          try {
+            const sampleResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/sample-tweets`);
+            tweets = await sampleResponse.json();
+            console.log(`Retrieved ${tweets.length} sample tweets as fallback`);
+          } catch (fallbackError) {
+            console.error('Error fetching sample tweets as fallback:', fallbackError);
+          }
+        }
       }
 
       // Check if we got any tweets

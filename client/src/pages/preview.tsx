@@ -298,15 +298,54 @@ export default function Preview() {
               <Button variant="outline" onClick={() => setLocation('/')}>
                 Back
               </Button>
-              <Button
-                onClick={() => fetchTweetsMutation.mutate()}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => {
+                  const updatedFilters = {
+                    ...newsletter.tweetFilters,
+                    useSampleData: true
+                  };
+                  
+                  // Update newsletter with the sample data flag
+                  const payload = {
+                    ...newsletter,
+                    tweetFilters: updatedFilters
+                  };
+                  
+                  // Call the mutation with the updated payload
+                  fetchTweetsMutation.mutate(payload);
+                }}
                 disabled={fetchTweetsMutation.isPending}
-              >
-                {fetchTweetsMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Refresh Content
-              </Button>
+                >
+                  {fetchTweetsMutation.isPending && newsletter.tweetFilters?.useSampleData && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Use Sample Data
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Ensure useSampleData is set to false
+                    const updatedFilters = {
+                      ...newsletter.tweetFilters,
+                      useSampleData: false
+                    };
+                    
+                    // Update newsletter with the flag turned off
+                    const payload = {
+                      ...newsletter,
+                      tweetFilters: updatedFilters
+                    };
+                    
+                    // Call the mutation with the updated payload
+                    fetchTweetsMutation.mutate(payload);
+                  }}
+                  disabled={fetchTweetsMutation.isPending}
+                >
+                  {fetchTweetsMutation.isPending && !newsletter.tweetFilters?.useSampleData && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Refresh Content
+                </Button>
+              </div>
             </div>
           </div>
 

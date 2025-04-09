@@ -13,6 +13,7 @@ export type TweetFilters = {
   sectorId?: number; // Optional sector ID to filter tweets by this sector's handles
   followerThreshold: 'low' | 'medium' | 'high'; // Different follower level categories
   accountTypes: ('news' | 'verified' | 'influencer')[]; // Types of accounts to include
+  useSampleData?: boolean; // Flag to use sample data when Twitter API is unavailable
 };
 
 export type Tweet = {
@@ -156,7 +157,8 @@ export const insertNewsletterSchema = createInsertSchema(newsletters).pick({
     newsOutlets: z.array(z.string()).optional(),
     sectorId: z.number().optional(),
     followerThreshold: z.enum(['low', 'medium', 'high']).optional(),
-    accountTypes: z.array(z.enum(['news', 'verified', 'influencer'])).optional()
+    accountTypes: z.array(z.enum(['news', 'verified', 'influencer'])).optional(),
+    useSampleData: z.boolean().optional()
   }).optional()
 });
 
