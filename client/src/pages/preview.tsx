@@ -521,10 +521,17 @@ export default function Preview() {
               <div className="flex justify-end">
                 <Button 
                   onClick={() => {
+                    console.log('Applying filters and refreshing content');
                     setActiveTab('preview');
-                    fetchTweetsMutation.mutate({});
+                    fetchTweetsMutation.mutate({
+                      narrativeSettings: newsletter.narrativeSettings
+                    });
                   }}
+                  disabled={fetchTweetsMutation.isPending}
                 >
+                  {fetchTweetsMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Apply Filters & Refresh Content
                 </Button>
               </div>
@@ -538,6 +545,8 @@ export default function Preview() {
 
 // Helper function to generate narrative content from tweets
 function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings): string {
+  // Debug logging to ensure settings are being applied
+  console.log('Generating narrative summary with settings:', JSON.stringify(settings, null, 2));
   if (!tweets || tweets.length === 0) {
     return `<div class="newsletter-section">
       <p class="text-muted-foreground">No news content available. Here are some suggestions:</p>
@@ -805,25 +814,128 @@ function generateNarrativeSummary(tweets: Tweet[], settings: NarrativeSettings):
     contentHtml += `<p class="mt-8 ${toneClass} leading-relaxed">${conclusion} ${conclusionText}</p>`;
   }
   
-  // Format the final HTML with styling appropriate to the selected style
-  const styleClass = {
-    professional: 'prose-headings:text-primary prose-p:text-gray-800 prose-strong:text-primary',
-    casual: 'prose-headings:text-primary-500 prose-p:text-gray-700',
-    storytelling: 'prose-p:text-gray-700 prose-headings:text-primary-600 prose-headings:italic'
-  }[settings.style];
+  // Create dramatically different styling for each style setting
+  let styleClass;
+  let additionalStyles = '';
+  
+  switch(settings.style) {
+    case 'professional':
+      styleClass = 'prose-headings:text-blue-800 prose-p:text-gray-800 prose-strong:text-blue-700';
+      additionalStyles = `
+        <style>
+          .narrative-content { 
+            font-family: 'Georgia', serif;
+            border-left: 3px solid blue;
+            padding-left: 1rem;
+          }
+          .narrative-content h2 {
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 0.5rem;
+          }
+          .topic-section { margin-bottom: 1.5rem; }
+        </style>
+      `;
+      break;
+    case 'casual':
+      styleClass = 'prose-headings:text-green-500 prose-p:text-gray-700';
+      additionalStyles = `
+        <style>
+          .narrative-content { 
+            font-family: 'Arial', sans-serif;
+          }
+          .narrative-content h2 {
+            color: #22c55e !important; 
+            font-weight: 600;
+          }
+          .topic-section { 
+            margin-bottom: 1.5rem; 
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+          }
+        </style>
+      `;
+      break;
+    case 'storytelling':
+      styleClass = 'prose-p:text-gray-700 prose-headings:text-purple-600 prose-headings:italic';
+      additionalStyles = `
+        <style>
+          .narrative-content { 
+            font-family: 'Palatino', serif;
+            line-height: 1.8;
+            background-color: #fdfdf9;
+            padding: 1.5rem;
+            border-radius: 8px;
+          }
+          .narrative-content h2 {
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 1.5rem;
+          }
+          .narrative-content p:first-of-type:first-letter {
+            font-size: 2.5em;
+            font-weight: bold;
+            float: left;
+            margin-right: 0.1em;
+            line-height: 0.9;
+          }
+          .topic-section { margin-bottom: 2rem; }
+        </style>
+      `;
+      break;
+    default:
+      styleClass = 'prose-headings:text-primary prose-p:text-gray-800 prose-strong:text-primary';
+      additionalStyles = '';
+  }
 
-  // Set the title based on the main topic or use a default
-  const title = topicGroups.length > 0 && topicGroups[0].topic
-    ? `${topicGroups[0].topic.charAt(0).toUpperCase() + topicGroups[0].topic.slice(1)} Update` 
-    : 'Latest Industry Developments';
+  // Set the title based on the style and main topic
+  let title;
+  if (topicGroups.length > 0 && topicGroups[0].topic) {
+    const topicName = topicGroups[0].topic.charAt(0).toUpperCase() + topicGroups[0].topic.slice(1);
+    
+    // Create very distinct titles based on the style
+    switch(settings.style) {
+      case 'professional':
+        title = `${topicName} Market Analysis & Insights`;
+        break;
+      case 'casual':
+        title = `What's New with ${topicName}? Latest Updates!`;
+        break;
+      case 'storytelling':
+        title = `The Unfolding Story of ${topicName}`;
+        break;
+      default:
+        title = `${topicName} Update`;
+    }
+  } else {
+    title = 'Latest Industry Developments';
+  }
+
+  // Add style-specific labels at the top to make it obvious which style is being used
+  const styleLabel = `
+    <div class="style-indicator p-2 mb-4 text-white text-center text-sm rounded" 
+         style="background-color: ${settings.style === 'professional' ? '#1e40af' : 
+                                    settings.style === 'casual' ? '#059669' : 
+                                    '#7e22ce'}">
+      ${settings.style === 'professional' ? 'PROFESSIONAL STYLE' : 
+        settings.style === 'casual' ? 'CASUAL STYLE' : 
+        'STORYTELLING STYLE'} - ${settings.tone.toUpperCase()} TONE
+    </div>
+  `;
 
   return `
+    ${additionalStyles}
     <div class="narrative-content">
+      ${styleLabel}
       <div class="prose max-w-none ${styleClass}">
         <h2 class="text-2xl font-semibold mb-5">${title}</h2>
         ${contentHtml}
         <div class="text-sm text-muted-foreground mt-8 pt-4 border-t border-muted">
           <p>Last updated: ${new Date().toLocaleString()}</p>
+          <p class="text-xs text-muted-foreground mt-1">
+            Generated with: ${settings.paragraphCount} paragraphs, ${settings.wordCount} word target, 
+            ${settings.style} style, ${settings.tone} tone
+          </p>
         </div>
       </div>
     </div>
