@@ -135,6 +135,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           newsOutlets: [],
           followerThreshold: 'low',
           accountTypes: []
+        },
+        narrativeSettings: parsed.data.narrativeSettings || {
+          style: 'professional',
+          tone: 'formal',
+          wordCount: 300,
+          paragraphCount: 6,
+          format: 'newsletter',
+          themeStyle: 'minimal',
+          useQuotes: false,
+          improveSentences: true,
+          enhanceCohesion: true,
+          includeTransitions: true
         }
       };
       
