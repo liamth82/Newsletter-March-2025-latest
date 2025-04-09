@@ -69,9 +69,17 @@ export default function Preview() {
     onSuccess: () => {
       toast({
         title: "Settings Updated",
-        description: "Narrative settings have been saved successfully.",
+        description: "Narrative settings have been saved. Refreshing content...",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/newsletters/${id}`] });
+      
+      // Automatically refresh the content with the new settings
+      setActiveTab('preview');
+      
+      // Use a small delay to ensure state has been updated
+      setTimeout(() => {
+        fetchTweetsMutation.mutate({});
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -455,8 +463,15 @@ export default function Preview() {
               <div className="flex justify-end">
                 <Button 
                   onClick={() => {
+                    // Make sure we're using the latest narrative settings
+                    if (newsletter && newsletter.narrativeSettings) {
+                      console.log('Applying narrative settings and refreshing content:', 
+                        JSON.stringify(newsletter.narrativeSettings, null, 2));
+                    }
                     setActiveTab('preview');
-                    fetchTweetsMutation.mutate({});
+                    fetchTweetsMutation.mutate({
+                      narrativeSettings: newsletter.narrativeSettings
+                    });
                   }}
                   disabled={updateNarrativeSettingsMutation.isPending}
                 >
